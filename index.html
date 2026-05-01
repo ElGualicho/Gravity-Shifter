@@ -2,13 +2,57 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Gravity Shifter</title>
+    <title>Gravity Wizard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
+
+        <div id="levelBadge" class="hud-badge">Chapitre 1</div>
+
+        <section id="gameMenu" class="screen-overlay menu-screen is-visible" aria-label="Menu principal">
+            <div class="arcane-card">
+                <div class="sigil" aria-hidden="true">✦</div>
+                <p class="eyebrow">Jeu de plateformes antigravité</p>
+                <h1>Gravity Wizard</h1>
+                <p class="intro">
+                    Traversez les failles du Néant en inversant la gravité au bon moment.
+                    Une surface, un saut de logique, puis l'équilibre bascule.
+                </p>
+
+                <div class="controls-panel">
+                    <span>← → Se déplacer</span>
+                    <span>Espace Inverser la gravité</span>
+                    <span>Échap Menu</span>
+                </div>
+
+                <div class="menu-actions">
+                    <button class="primary-btn" onclick="startGame(1)">✨ Nouvelle partie</button>
+                    <button onclick="startGame(2)">⚡ Chapitre 2</button>
+                    <button onclick="startGame(3)">🌀 Chapitre 3</button>
+                    <button onclick="startGame(4)">❄️ Chapitre 4</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="gameOver" class="screen-overlay game-over-screen" aria-label="Écran de game over">
+            <div class="arcane-card danger-card">
+                <div class="sigil danger" aria-hidden="true">☽</div>
+                <p class="eyebrow">Rupture gravitationnelle</p>
+                <h2>Le Néant vous a rattrapé</h2>
+                <p id="gameOverText" class="intro">L'équilibre magique s'est rompu.</p>
+
+                <div class="menu-actions compact">
+                    <button class="primary-btn" onclick="retryLevel()">↻ Recommencer le chapitre</button>
+                    <button onclick="showMenu()">☰ Retour au menu</button>
+                </div>
+
+                <p class="hint">R ou Entrée pour recommencer · Échap pour le menu</p>
+            </div>
+        </section>
     </div>
+
     <script src="game.js"></script>
 </body>
 </html>
