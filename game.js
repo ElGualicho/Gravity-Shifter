@@ -22,6 +22,8 @@ const platImg2         = new Image(); platImg2.src         = 'assets/platform2.p
 // Autres
 const flagImg          = new Image(); flagImg.src          = 'assets/flag.png';              flagImg.onload          = () => imagesLoaded++;
 const picsImg          = new Image(); picsImg.src          = 'assets/pics.png';              picsImg.onload          = () => imagesLoaded++;
+
+// Animation joueur : les 4 frames doivent rester utilisées pendant les déplacements.
 const walkFrames       = [];
 ['walk1.png','walk2.png','walk3.png','walk4.png'].forEach((n, i) => {
     const img = new Image(); img.src = `assets/${n}`; img.onload = () => imagesLoaded++;
@@ -75,6 +77,8 @@ function loadLevel(lv) {
     keys = {};
     player.velX  = 0;
     player.velY  = 0;
+    player.currentFrame = 0;
+    player.isMoving = false;
     gravityDirection = 1;
     currentLevel = lv;
     player.x = 100;
@@ -177,6 +181,23 @@ function drawStaticFloor(img) {
     for (let x = 0; x < canvas.width; x += tW) ctx.drawImage(img, x, yPos, tW, tH);
 }
 
+function updatePlayerAnimation() {
+    const movingOnSurface = player.onSurface && Math.abs(player.velX) > 0.4;
+    player.isMoving = movingOnSurface;
+
+    if (movingOnSurface) {
+        player.currentFrame = (player.currentFrame + player.animationSpeed) % walkFrames.length;
+    } else {
+        player.currentFrame = 0;
+    }
+}
+
+function getCurrentWalkFrame() {
+    const frameIndex = Math.floor(player.currentFrame) % walkFrames.length;
+    const frame = walkFrames[frameIndex];
+    return frame?.complete && frame.naturalWidth ? frame : walkFrames[0];
+}
+
 // ─── MENU ────────────────────────────────────────────────────────────────────
 function showMenu()    { gameState = 'MENU'; document.getElementById('gameMenu').style.display = 'block'; }
 function startGame(lv) { document.getElementById('gameMenu').style.display = 'none'; gameState = 'PLAYING'; loadLevel(lv); }
@@ -187,14 +208,11 @@ function update() {
     if (gameState !== 'PLAYING') { draw(); requestAnimationFrame(update); return; }
 
     // ── Mouvement horizontal fluide (accélération + friction) ──
-    player.isMoving = false;
     if (keys['ArrowRight']) {
         player.velX    = Math.min(player.velX + ACCEL, MAX_VX);
-        player.isMoving = true;
         player.facingRight = true;
     } else if (keys['ArrowLeft']) {
         player.velX    = Math.max(player.velX - ACCEL, -MAX_VX);
-        player.isMoving = true;
         player.facingRight = false;
     } else {
         player.velX *= FRIC;
@@ -214,11 +232,6 @@ function update() {
     } else {
         player.velX = 0;   // stop à la collision
     }
-
-    // Animation
-    player.currentFrame = (player.isMoving && player.onSurface)
-        ? (player.currentFrame + player.animationSpeed) % walkFrames.length
-        : 0;
 
     if (player.x < 0)                          { player.x = 0;                          player.velX = 0; }
     if (player.x + player.width > canvas.width) { player.x = canvas.width - player.width; player.velX = 0; }
@@ -242,6 +255,9 @@ function update() {
             }
         }
     });
+
+    // Animation joueur après collisions : on utilise walk1 → walk4 uniquement si le joueur se déplace sur une surface.
+    updatePlayerAnimation();
 
     // Collision cristaux (hitbox réduite)
     hazards.forEach(h => {
@@ -311,11 +327,12 @@ function draw() {
 
     if (flagImg.complete) ctx.drawImage(flagImg, goal.x, goal.y, goal.w, goal.h);
 
-    if (walkFrames[0]?.complete) {
+    const playerFrame = getCurrentWalkFrame();
+    if (playerFrame?.complete) {
         ctx.save();
         ctx.translate(player.x + player.width/2, player.y + player.height/2);
         ctx.scale(player.facingRight ? 1 : -1, gravityDirection === -1 ? -1 : 1);
-        ctx.drawImage(walkFrames[Math.floor(player.currentFrame)],
+        ctx.drawImage(playerFrame,
             -player.width/2, -player.height/2, player.width, player.height);
         ctx.restore();
     }
