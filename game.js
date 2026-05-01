@@ -16,7 +16,7 @@ function resizeCanvas() {
 window.addEventListener('resize', () => { resizeCanvas(); loadLevel(currentLevel); });
 resizeCanvas();
 
-// --- CHARGEMENT DES ASSETS ---
+// --- ASSETS ---
 let imagesLoaded = 0;
 
 const backgroundImg = new Image();
@@ -27,9 +27,6 @@ const platImg = new Image();
 platImg.src = 'assets/platform1.png';
 platImg.onload = () => imagesLoaded++;
 
-const floorImg = new Image();
-floorImg.src = 'assets/platform1.png'; // Même asset pour le sol
-
 const flagImg = new Image();
 flagImg.src = 'assets/flag.png';
 flagImg.onload = () => imagesLoaded++;
@@ -39,23 +36,27 @@ picsImg.src = 'assets/pics.png';
 picsImg.onload = () => imagesLoaded++;
 
 const walkFrames = [];
-const frameNames = ['walk1.png', 'walk2.png', 'walk3.png', 'walk4.png'];
-frameNames.forEach((name, index) => {
+['walk1.png', 'walk2.png', 'walk3.png', 'walk4.png'].forEach((name, i) => {
     const img = new Image();
     img.src = `assets/${name}`;
     img.onload = () => imagesLoaded++;
-    walkFrames[index] = img;
+    walkFrames[i] = img;
 });
 
-// Taille du joueur : plus grand et proportionné (ratio ~0.75 largeur/hauteur)
+// Taille du joueur
 const PLAYER_W = 75;
 const PLAYER_H = 95;
 
+// Taille naturelle des cristaux (proportions d'origine)
+const CRYSTAL_W = 65;
+const CRYSTAL_H = 70;
+
 const player = {
-    x: 100, y: 200,
+    x: 100, y: 300,
     width: PLAYER_W, height: PLAYER_H,
-    speed: 6, velY: 0, onSurface: false,
-    currentFrame: 0, animationSpeed: 0.18,
+    speed: 10,          // Vitesse augmentée
+    velY: 0, onSurface: false,
+    currentFrame: 0, animationSpeed: 0.2,
     isMoving: false, facingRight: true
 };
 
@@ -63,7 +64,7 @@ let platforms = [];
 let hazards = [];
 let goal = { x: 0, y: 0, w: 100, h: 110 };
 
-// --- LOGIQUE DES NIVEAUX ---
+// --- NIVEAUX ---
 function loadLevel(lv) {
     keys = {};
     player.velY = 0;
@@ -71,83 +72,90 @@ function loadLevel(lv) {
     currentLevel = lv;
 
     const floorY = canvas.height - 65;
-    // Le sol est une plateforme de collision invisible (le rendu est fait en tiling)
-    const floorPlatform = { x: 0, y: floorY, w: canvas.width * 2, h: 100 };
+    const CEIL_Y  = 40;   // y des plateformes plafond
+    const CEIL_H  = 55;   // hauteur des plateformes plafond
+
+    // Plateforme sol (collision, non dessinée individuellement)
+    const floorPlat = { x: 0, y: floorY, w: canvas.width * 2, h: 100, isFloor: true };
 
     player.x = 100;
+    player.y = floorY - PLAYER_H - 2;
 
     if (lv === 1) {
-        player.y = floorY - PLAYER_H - 5;
+        // ─── NIVEAU 1 : 2 flips ─────────────────────────────────────────
+        // Plafond → passer zone 1 → sol → plafond → passer zone 2 → goal
         platforms = [
-            floorPlatform,
-            { x: 300, y: floorY - 160, w: 220, h: 55 },
-            { x: 620, y: floorY - 280, w: 200, h: 55 },
-            { x: 950, y: floorY - 160, w: 220, h: 55 },
-            { x: 1250, y: floorY - 300, w: 200, h: 55 },
+            floorPlat,
+            { x: 210, y: CEIL_Y, w: 300, h: CEIL_H },   // Plafond 1
+            { x: 640, y: CEIL_Y, w: 280, h: CEIL_H },   // Plafond 2
+            { x: 1000, y: CEIL_Y, w: 260, h: CEIL_H },  // Plafond 3
         ];
         hazards = [
-            { x: 530, y: floorY - 55, w: 90, h: 60, side: 'bottom' },
-            { x: 850, y: floorY - 55, w: 100, h: 60, side: 'bottom' },
+            { x: 255, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 670, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 1020, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         ];
         goal.x = canvas.width - 180;
         goal.y = floorY - 110;
 
     } else if (lv === 2) {
-        player.y = floorY - PLAYER_H - 5;
+        // ─── NIVEAU 2 : 4 flips + cristaux plafond ──────────────────────
+        // Plafonds plus courts, obstacles au plafond entre les plateformes
         platforms = [
-            floorPlatform,
-            { x: 280, y: floorY - 200, w: 180, h: 55 },
-            { x: 560, y: 80, w: 160, h: 55 },           // Plat haut (nécessite gravity flip)
-            { x: 820, y: floorY - 230, w: 180, h: 55 },
-            { x: 1080, y: 100, w: 160, h: 55 },          // Plat haut (nécessite gravity flip)
-            { x: 1340, y: floorY - 180, w: 180, h: 55 },
+            floorPlat,
+            { x: 170, y: CEIL_Y, w: 240, h: CEIL_H },
+            { x: 530, y: CEIL_Y, w: 210, h: CEIL_H },
+            { x: 840, y: CEIL_Y, w: 210, h: CEIL_H },
+            { x: 1130, y: CEIL_Y, w: 210, h: CEIL_H },
         ];
         hazards = [
-            { x: 460, y: floorY - 55, w: 100, h: 60, side: 'bottom' },
-            { x: 720, y: floorY - 55, w: 100, h: 60, side: 'bottom' },
-            { x: 560, y: 135, w: 160, h: 55, side: 'top' },   // Piques sous le plat du haut
-            { x: 1080, y: 155, w: 160, h: 55, side: 'top' },
+            // Sol
+            { x: 210, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 560, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 860, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 1150, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            // Plafond : entre les plateformes, force à redescendre
+            { x: 410, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+            { x: 750, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+            { x: 1060, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
         ];
         goal.x = canvas.width - 180;
         goal.y = floorY - 110;
 
-    } else if (lv === 3) {
-        // Niveau 3 : parcours complet avec allers-retours gravité, chaque section franchissable
-        player.y = floorY - PLAYER_H - 5;
+    } else {
+        // ─── NIVEAU 3 : 5 flips, obstacles denses ───────────────────────
         platforms = [
-            floorPlatform,
-            // Bloc 1 : première montée
-            { x: 250, y: floorY - 180, w: 170, h: 55 },
-            // Bloc 2 : plateforme haute accessible par flip depuis bloc1
-            { x: 480, y: 90, w: 170, h: 55 },
-            // Bloc 3 : retour bas
-            { x: 720, y: floorY - 200, w: 170, h: 55 },
-            // Bloc 4 : plateforme haute, accès par flip depuis bloc3
-            { x: 960, y: 110, w: 170, h: 55 },
-            // Bloc 5 : plateforme finale basse avant le drapeau
-            { x: 1200, y: floorY - 220, w: 200, h: 55 },
+            floorPlat,
+            { x: 140, y: CEIL_Y, w: 210, h: CEIL_H },
+            { x: 450, y: CEIL_Y, w: 190, h: CEIL_H },
+            { x: 750, y: CEIL_Y, w: 190, h: CEIL_H },
+            { x: 1040, y: CEIL_Y, w: 200, h: CEIL_H },
+            { x: 1330, y: CEIL_Y, w: 180, h: CEIL_H },
         ];
         hazards = [
-            // Piques au sol entre blocs
-            { x: 420, y: floorY - 55, w: 60, h: 60, side: 'bottom' },
-            { x: 660, y: floorY - 55, w: 60, h: 60, side: 'bottom' },
-            { x: 900, y: floorY - 55, w: 60, h: 60, side: 'bottom' },
-            { x: 1140, y: floorY - 55, w: 60, h: 60, side: 'bottom' },
-            // Piques plafond au-dessus des plateformes hautes
-            { x: 480, y: 40, w: 170, h: 55, side: 'top' },
-            { x: 960, y: 60, w: 170, h: 55, side: 'top' },
+            // Sol (dense)
+            { x: 185, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 485, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 785, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 1080, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: 1360, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            // Plafond (dense)
+            { x: 350, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+            { x: 640, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+            { x: 940, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+            { x: 1230, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
         ];
         goal.x = canvas.width - 160;
         goal.y = floorY - 110;
     }
 }
 
-// --- RENDU DU SOL EN TILING ---
+// --- SOL EN TILING ---
 function drawStaticFloor() {
     if (!platImg.complete || platImg.naturalWidth === 0) return;
     const tileW = platImg.naturalWidth;
     const tileH = 65;
-    const yPos = canvas.height - tileH;
+    const yPos  = canvas.height - tileH;
     for (let x = 0; x < canvas.width; x += tileW) {
         ctx.drawImage(platImg, x, yPos, tileW, tileH);
     }
@@ -165,24 +173,21 @@ function startGame(lv) {
     loadLevel(lv);
 }
 
-function resetGame(message) {
-    if (message) alert(message);
+function resetGame(msg) {
+    if (msg) alert(msg);
     loadLevel(currentLevel);
 }
 
 // --- BOUCLE PRINCIPALE ---
 function update() {
-    if (gameState !== 'PLAYING') {
-        draw();
-        requestAnimationFrame(update);
-        return;
-    }
+    if (gameState !== 'PLAYING') { draw(); requestAnimationFrame(update); return; }
 
     let nextX = player.x;
     player.isMoving = false;
     if (keys['ArrowRight']) { nextX += player.speed; player.isMoving = true; player.facingRight = true; }
     if (keys['ArrowLeft'])  { nextX -= player.speed; player.isMoving = true; player.facingRight = false; }
 
+    // Collision horizontale
     let canMoveX = true;
     platforms.forEach(p => {
         if (nextX < p.x + p.w && nextX + player.width > p.x &&
@@ -190,16 +195,18 @@ function update() {
     });
     if (canMoveX) player.x = nextX;
 
+    // Animation
     if (player.isMoving && player.onSurface) {
-        player.currentFrame += player.animationSpeed;
-        if (player.currentFrame >= walkFrames.length) player.currentFrame = 0;
+        player.currentFrame = (player.currentFrame + player.animationSpeed) % walkFrames.length;
     } else {
         player.currentFrame = 0;
     }
 
+    // Bornes
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
+    // Gravité + collision verticale
     player.velY += gravity * gravityDirection;
     player.y += player.velY;
     player.onSurface = false;
@@ -208,15 +215,16 @@ function update() {
         if (player.x < p.x + p.w && player.x + player.width > p.x &&
             player.y < p.y + p.h && player.y + player.height > p.y) {
             if (gravityDirection === 1) {
-                if (player.velY > 0)  { player.y = p.y - player.height; player.velY = 0; player.onSurface = true; }
-                else if (player.velY < 0) { player.y = p.y + p.h; player.velY = 0; }
+                if (player.velY >= 0) { player.y = p.y - player.height; player.velY = 0; player.onSurface = true; }
+                else                  { player.y = p.y + p.h;          player.velY = 0; }
             } else {
-                if (player.velY < 0)  { player.y = p.y + p.h; player.velY = 0; player.onSurface = true; }
-                else if (player.velY > 0) { player.y = p.y - player.height; player.velY = 0; }
+                if (player.velY <= 0) { player.y = p.y + p.h;          player.velY = 0; player.onSurface = true; }
+                else                  { player.y = p.y - player.height; player.velY = 0; }
             }
         }
     });
 
+    // Piques
     hazards.forEach(h => {
         if (player.x < h.x + h.w && player.x + player.width > h.x &&
             player.y < h.y + h.h && player.y + player.height > h.y) {
@@ -224,10 +232,12 @@ function update() {
         }
     });
 
-    if (player.y < -150 || player.y > canvas.height + 150) {
+    // Sortie écran
+    if (player.y < -200 || player.y > canvas.height + 200) {
         resetGame("Perdu dans l'éther...");
     }
 
+    // Objectif
     if (player.x < goal.x + goal.w && player.x + player.width > goal.x &&
         player.y < goal.y + goal.h && player.y + player.height > goal.y) {
         if (currentLevel < 3) {
@@ -243,6 +253,7 @@ function update() {
     requestAnimationFrame(update);
 }
 
+// --- RENDU ---
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -255,30 +266,29 @@ function draw() {
 
     if (gameState === 'MENU') return;
 
-    // Sol en tiling
     drawStaticFloor();
 
-    // Plateformes (toutes avec platform1)
+    // Plateformes (hors sol)
     platforms.forEach(p => {
-        if (!p.y || p.y >= canvas.height - 70) return; // skip floor platform (déjà dessinée)
+        if (p.isFloor) return;
         if (platImg.complete) ctx.drawImage(platImg, p.x, p.y, p.w, p.h);
     });
 
-    // Piques (cristaux)
+    // Cristaux — toujours à leur taille naturelle (CRYSTAL_W x CRYSTAL_H)
     hazards.forEach(h => {
         if (!picsImg.complete) return;
-        const crystalW = 60;
-        const count = Math.ceil(h.w / crystalW);
+        const count = Math.ceil(h.w / CRYSTAL_W);
         for (let i = 0; i < count; i++) {
-            const drawX = h.x + i * crystalW;
-            const drawW = Math.min(crystalW, h.x + h.w - drawX);
+            const drawX = h.x + i * CRYSTAL_W;
             ctx.save();
             if (h.side === 'top') {
-                ctx.translate(drawX + drawW / 2, h.y + h.h / 2);
+                // Accroché au plafond : retourné verticalement
+                ctx.translate(drawX + CRYSTAL_W / 2, h.y + CRYSTAL_H / 2);
                 ctx.scale(1, -1);
-                ctx.drawImage(picsImg, -drawW / 2, -h.h / 2, drawW, h.h);
+                ctx.drawImage(picsImg, -CRYSTAL_W / 2, -CRYSTAL_H / 2, CRYSTAL_W, CRYSTAL_H);
             } else {
-                ctx.drawImage(picsImg, drawX, h.y, drawW, h.h);
+                // Posé au sol : sens normal
+                ctx.drawImage(picsImg, drawX, h.y, CRYSTAL_W, CRYSTAL_H);
             }
             ctx.restore();
         }
@@ -292,8 +302,8 @@ function draw() {
         ctx.save();
         ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
         ctx.scale(player.facingRight ? 1 : -1, gravityDirection === -1 ? -1 : 1);
-        const frame = walkFrames[Math.floor(player.currentFrame)];
-        ctx.drawImage(frame, -player.width / 2, -player.height / 2, player.width, player.height);
+        ctx.drawImage(walkFrames[Math.floor(player.currentFrame)],
+            -player.width / 2, -player.height / 2, player.width, player.height);
         ctx.restore();
     }
 
@@ -302,11 +312,12 @@ function draw() {
     ctx.font = "italic 22px 'Palatino Linotype', serif";
     ctx.textAlign = "center";
     ctx.shadowBlur = 8; ctx.shadowColor = "black";
-    ctx.fillText(`Chapitre ${currentLevel} • Espace pour défier les lois`, canvas.width / 2, canvas.height - 20);
+    ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width / 2, canvas.height - 20);
     ctx.shadowBlur = 0;
 }
 
-window.addEventListener('keydown', (e) => {
+// --- CONTRÔLES ---
+window.addEventListener('keydown', e => {
     keys[e.code] = true;
     if (e.code === 'Space' && player.onSurface && gameState === 'PLAYING') {
         gravityDirection *= -1;
@@ -315,16 +326,17 @@ window.addEventListener('keydown', (e) => {
     }
     if (e.code === 'Escape' && gameState === 'PLAYING') showMenu();
 });
-window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// --- MENU HTML ---
-const menuHTML = `
-<div id="gameMenu" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;background:rgba(0,0,0,0.85);padding:50px;border-radius:20px;border:2px solid gold;box-shadow:0 0 20px gold;font-family:'Palatino Linotype',serif;z-index:100;">
-    <h1 style="color:gold;margin-bottom:30px;font-size:3em;text-shadow:2px 2px black;">Gravity Wizard</h1>
-    <button onclick="startGame(1)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid gold;border-radius:5px;font-size:1.2em;">✨ Nouvelle Partie</button>
-    <button onclick="startGame(2)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid #aaa;border-radius:5px;font-size:1.2em;">⚡ Chapitre 2</button>
-    <button onclick="startGame(3)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid cyan;border-radius:5px;font-size:1.2em;">🌀 Chapitre 3</button>
-</div>`;
-document.body.insertAdjacentHTML('beforeend', menuHTML);
+// --- MENU ---
+document.body.insertAdjacentHTML('beforeend', `
+<div id="gameMenu" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+text-align:center;background:rgba(0,0,0,0.85);padding:50px;border-radius:20px;
+border:2px solid gold;box-shadow:0 0 20px gold;font-family:'Palatino Linotype',serif;z-index:100;">
+  <h1 style="color:gold;margin-bottom:30px;font-size:3em;text-shadow:2px 2px black;">Gravity Wizard</h1>
+  <button onclick="startGame(1)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid gold;border-radius:5px;font-size:1.2em;">✨ Nouvelle Partie</button>
+  <button onclick="startGame(2)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid #aaa;border-radius:5px;font-size:1.2em;">⚡ Chapitre 2</button>
+  <button onclick="startGame(3)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid cyan;border-radius:5px;font-size:1.2em;">🌀 Chapitre 3</button>
+</div>`);
 
 update();
