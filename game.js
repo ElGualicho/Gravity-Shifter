@@ -4,7 +4,6 @@ const ctx    = canvas.getContext('2d');
 const menuEl        = document.getElementById('gameMenu');
 const gameOverEl    = document.getElementById('gameOver');
 const gameOverText  = document.getElementById('gameOverText');
-const levelBadgeEl  = document.getElementById('levelBadge');
 
 let gameState        = 'MENU';
 let currentLevel     = 1;
@@ -51,6 +50,7 @@ const MAX_VY    = 13;     // Vitesse terminale verticale (évite les chutes brut
 const MAX_VX    = 9;      // Vitesse max horizontale
 const ACCEL     = 1.3;    // Accélération au démarrage
 const FRIC      = 0.78;   // Friction à l'arrêt (douceur de décélération)
+const FLIP_OFFSET = 12;   // Décalage anti-recollision après inversion
 
 const player = {
     x: 100, y: 300, width: PLAYER_W, height: PLAYER_H,
@@ -392,10 +392,6 @@ function draw() {
     ctx.textAlign = "center"; ctx.shadowBlur = 8; ctx.shadowColor = "black";
     ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width/2, canvas.height - 20);
     ctx.shadowBlur = 0;
-
-    if (levelBadgeEl) {
-        levelBadgeEl.textContent = `Chapitre ${currentLevel}`;
-    }
 }
 
 // ─── CONTRÔLES ───────────────────────────────────────────────────────────────
@@ -405,7 +401,8 @@ window.addEventListener('keydown', e => {
         gravityDirection *= -1;
         player.onSurface  = false;
         player.velX      *= 0.6;  // légère réduction d'élan lors du flip
-        player.y         += gravityDirection * 5;
+        player.velY       = gravityDirection * GRAVITY;
+        player.y         += gravityDirection * FLIP_OFFSET;
     }
     if (e.code === 'Escape' && gameState === 'PLAYING') showMenu();
     if (gameState === 'GAME_OVER' && (e.code === 'Enter' || e.code === 'KeyR')) retryLevel();
