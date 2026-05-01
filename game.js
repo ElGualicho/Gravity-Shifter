@@ -1,6 +1,11 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
 
+const menuEl        = document.getElementById('gameMenu');
+const gameOverEl    = document.getElementById('gameOver');
+const gameOverText  = document.getElementById('gameOverText');
+const levelBadgeEl  = document.getElementById('levelBadge');
+
 let gameState        = 'MENU';
 let currentLevel     = 1;
 let gravityDirection = 1;
@@ -198,10 +203,43 @@ function getCurrentWalkFrame() {
     return frame?.complete && frame.naturalWidth ? frame : walkFrames[0];
 }
 
-// ─── MENU ────────────────────────────────────────────────────────────────────
-function showMenu()    { gameState = 'MENU'; document.getElementById('gameMenu').style.display = 'block'; }
-function startGame(lv) { document.getElementById('gameMenu').style.display = 'none'; gameState = 'PLAYING'; loadLevel(lv); }
-function resetGame(msg){ if (msg) alert(msg); loadLevel(currentLevel); }
+// ─── INTERFACE ───────────────────────────────────────────────────────────────
+function setOverlayVisibility(menuVisible, gameOverVisible) {
+    menuEl.classList.toggle('is-visible', menuVisible);
+    gameOverEl.classList.toggle('is-visible', gameOverVisible);
+}
+
+function showMenu() {
+    gameState = 'MENU';
+    keys = {};
+    setOverlayVisibility(true, false);
+}
+
+function startGame(lv) {
+    setOverlayVisibility(false, false);
+    gameState = 'PLAYING';
+    loadLevel(lv);
+}
+
+function showGameOver(msg) {
+    gameState = 'GAME_OVER';
+    keys = {};
+    player.velX = 0;
+    player.velY = 0;
+    player.isMoving = false;
+    gameOverText.textContent = msg || "L'équilibre magique s'est rompu.";
+    setOverlayVisibility(false, true);
+}
+
+function retryLevel() {
+    setOverlayVisibility(false, false);
+    gameState = 'PLAYING';
+    loadLevel(currentLevel);
+}
+
+function resetGame(msg) {
+    showGameOver(msg);
+}
 
 // ─── BOUCLE PRINCIPALE ───────────────────────────────────────────────────────
 function update() {
@@ -260,16 +298,25 @@ function update() {
     updatePlayerAnimation();
 
     // Collision cristaux (hitbox réduite)
-    hazards.forEach(h => {
+    for (const h of hazards) {
         const hx = h.x+HBOX_MX, hw = h.w-2*HBOX_MX;
         const hy = h.y+HBOX_MY, hh = h.h-HBOX_MY;
         const px = player.x+8,  pw = player.width-16;
         const py = player.y+8,  ph = player.height-16;
-        if (px < hx+hw && px+pw > hx && py < hy+hh && py+ph > hy)
+        if (px < hx+hw && px+pw > hx && py < hy+hh && py+ph > hy) {
             resetGame("Le Néant vous a rattrapé...");
-    });
+            draw();
+            requestAnimationFrame(update);
+            return;
+        }
+    }
 
-    if (player.y < -200 || player.y > canvas.height+200) resetGame("Perdu dans l'éther...");
+    if (player.y < -200 || player.y > canvas.height+200) {
+        resetGame("Perdu dans l'éther...");
+        draw();
+        requestAnimationFrame(update);
+        return;
+    }
 
     // Objectif
     if (player.x < goal.x+goal.w && player.x+player.width > goal.x &&
@@ -292,7 +339,11 @@ function draw() {
 
     if (bgImg.complete) {
         ctx.save();
-        ctx.filter = gameState === 'MENU' ? "blur(10px) brightness(0.4)" : "blur(4px) brightness(0.65)";
+        ctx.filter = gameState === 'MENU'
+            ? "blur(10px) brightness(0.38)"
+            : gameState === 'GAME_OVER'
+                ? "blur(5px) brightness(0.45)"
+                : "blur(4px) brightness(0.65)";
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
         ctx.restore();
     }
@@ -341,6 +392,10 @@ function draw() {
     ctx.textAlign = "center"; ctx.shadowBlur = 8; ctx.shadowColor = "black";
     ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width/2, canvas.height - 20);
     ctx.shadowBlur = 0;
+
+    if (levelBadgeEl) {
+        levelBadgeEl.textContent = `Chapitre ${currentLevel}`;
+    }
 }
 
 // ─── CONTRÔLES ───────────────────────────────────────────────────────────────
@@ -353,19 +408,11 @@ window.addEventListener('keydown', e => {
         player.y         += gravityDirection * 5;
     }
     if (e.code === 'Escape' && gameState === 'PLAYING') showMenu();
+    if (gameState === 'GAME_OVER' && (e.code === 'Enter' || e.code === 'KeyR')) retryLevel();
+    if (gameState === 'GAME_OVER' && e.code === 'Escape') showMenu();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// ─── MENU ────────────────────────────────────────────────────────────────────
-document.body.insertAdjacentHTML('beforeend', `
-<div id="gameMenu" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  text-align:center;background:rgba(0,0,0,0.85);padding:50px;border-radius:20px;
-  border:2px solid gold;box-shadow:0 0 20px gold;font-family:'Palatino Linotype',serif;z-index:100;">
-  <h1 style="color:gold;margin-bottom:30px;font-size:3em;text-shadow:2px 2px black;">Gravity Wizard</h1>
-  <button onclick="startGame(1)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid gold;border-radius:5px;font-size:1.2em;">✨ Nouvelle Partie</button>
-  <button onclick="startGame(2)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid #aaa;border-radius:5px;font-size:1.2em;">⚡ Chapitre 2</button>
-  <button onclick="startGame(3)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid cyan;border-radius:5px;font-size:1.2em;">🌀 Chapitre 3</button>
-  <button onclick="startGame(4)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#333;color:#a8d8ea;border:1px solid #a8d8ea;border-radius:5px;font-size:1.2em;">❄️ Chapitre 4</button>
-</div>`);
-
+// ─── INITIALISATION ──────────────────────────────────────────────────────────
+showMenu();
 update();
