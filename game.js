@@ -1,259 +1,246 @@
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const ctx    = canvas.getContext('2d');
 
-// --- ÉTATS DU JEU ---
-let gameState = 'MENU';
-let currentLevel = 1;
-let gravity = 0.5;
+let gameState       = 'MENU';
+let currentLevel    = 1;
 let gravityDirection = 1;
-let keys = {};
+let keys            = {};
 
-// --- CONFIGURATION ---
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', () => { resizeCanvas(); loadLevel(currentLevel); });
 resizeCanvas();
 
-// --- ASSETS ---
+// ─── ASSETS ──────────────────────────────────────────────────────────────────
 let imagesLoaded = 0;
-
-const backgroundImg = new Image();
-backgroundImg.src = 'assets/background.png';
-backgroundImg.onload = () => imagesLoaded++;
-
-const platImg = new Image();
-platImg.src = 'assets/platform1.png';
-platImg.onload = () => imagesLoaded++;
-
-const flagImg = new Image();
-flagImg.src = 'assets/flag.png';
-flagImg.onload = () => imagesLoaded++;
-
-const picsImg = new Image();
-picsImg.src = 'assets/pics.png';
-picsImg.onload = () => imagesLoaded++;
-
-const walkFrames = [];
-['walk1.png', 'walk2.png', 'walk3.png', 'walk4.png'].forEach((name, i) => {
-    const img = new Image();
-    img.src = `assets/${name}`;
-    img.onload = () => imagesLoaded++;
+const backgroundImg = new Image(); backgroundImg.src = 'assets/background.png'; backgroundImg.onload = () => imagesLoaded++;
+const platImg       = new Image(); platImg.src       = 'assets/platform1.png';  platImg.onload       = () => imagesLoaded++;
+const flagImg       = new Image(); flagImg.src       = 'assets/flag.png';       flagImg.onload       = () => imagesLoaded++;
+const picsImg       = new Image(); picsImg.src       = 'assets/pics.png';       picsImg.onload       = () => imagesLoaded++;
+const walkFrames    = [];
+['walk1.png','walk2.png','walk3.png','walk4.png'].forEach((n,i) => {
+    const img = new Image(); img.src = `assets/${n}`; img.onload = () => imagesLoaded++;
     walkFrames[i] = img;
 });
 
-// Taille du joueur
-const PLAYER_W = 75;
-const PLAYER_H = 95;
-
-// Taille naturelle des cristaux (proportions d'origine)
-const CRYSTAL_W = 65;
-const CRYSTAL_H = 70;
+// ─── CONSTANTES ──────────────────────────────────────────────────────────────
+const PLAYER_W    = 75;
+const PLAYER_H    = 95;
+const CRYSTAL_W   = 65;   // Taille naturelle d'un cristal
+const CRYSTAL_H   = 70;
+const GRAVITY     = 0.5;
+// Marge de tolérance pour les hitbox des cristaux (rend le jeu plus juste)
+const HBOX_MX     = 20;   // marge horizontale par cristal
+const HBOX_MY     = 18;   // marge verticale (pointe du cristal)
 
 const player = {
-    x: 100, y: 300,
-    width: PLAYER_W, height: PLAYER_H,
-    speed: 10,          // Vitesse augmentée
+    x: 100, y: 300, width: PLAYER_W, height: PLAYER_H,
+    speed: 8,              // ← vitesse corrigée
     velY: 0, onSurface: false,
     currentFrame: 0, animationSpeed: 0.2,
     isMoving: false, facingRight: true
 };
 
-let platforms = [];
-let hazards = [];
-let goal = { x: 0, y: 0, w: 100, h: 110 };
+let platforms = [], hazards = [], goal = { x:0, y:0, w:100, h:110 };
 
-// --- NIVEAUX ---
+// ─── NIVEAUX ─────────────────────────────────────────────────────────────────
+//
+//  Mécanique centrale :
+//    - Gravité normale  (dir= 1) → joueur posé sur le DESSUS des plateformes sol
+//    - Gravité inversée (dir=-1) → joueur accroché au DESSOUS des plateformes plafond
+//    - Espace (au sol seulement) → bascule de gravité
+//
+//  Design de chaque segment :
+//    [ZONE ENTRÉE] sol libre → joueur peut basculer vers le plafond
+//    [CRISTAUX]    sol bloqué → joueur DOIT être au plafond
+//    [ZONE SORTIE] sol libre → joueur bascule en retombant sur le sol
+//
 function loadLevel(lv) {
-    keys = {};
-    player.velY = 0;
-    gravityDirection = 1;
-    currentLevel = lv;
-
-    const floorY = canvas.height - 65;
-    const CEIL_Y  = 40;   // y des plateformes plafond
-    const CEIL_H  = 55;   // hauteur des plateformes plafond
-
-    // Plateforme sol (collision, non dessinée individuellement)
-    const floorPlat = { x: 0, y: floorY, w: canvas.width * 2, h: 100, isFloor: true };
-
+    keys = {}; player.velY = 0; gravityDirection = 1; currentLevel = lv;
     player.x = 100;
+
+    const W      = canvas.width;
+    const H      = canvas.height;
+    const floorY = H - 65;        // Hauteur du sol
+    const CEIL_Y = 40;            // Hauteur des plateformes plafond
+    const CEIL_H = 55;
+
+    const floorPlat = { x:0, y:floorY, w:W*2, h:100, isFloor:true };
     player.y = floorY - PLAYER_H - 2;
 
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    // Crée une plateforme plafond et ses cristaux sol associés.
+    //   px, pw  : position et largeur de la plateforme
+    //   cStart  : % du début des cristaux dans la plateforme (0..1)
+    //   cCount  : nombre de cristaux
+    function makeCeilPlat(px, pw) {
+        return { x: px|0, y: CEIL_Y, w: pw|0, h: CEIL_H };
+    }
+    function makeFloorCrystals(px, pw, cOffset, cCount) {
+        return { x: (px + pw*cOffset)|0, y: floorY - CRYSTAL_H, w: cCount*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' };
+    }
+    function makeCeilCrystals(px, pw, cOffset, cCount) {
+        return { x: (px + pw*cOffset)|0, y: CEIL_Y + CEIL_H, w: cCount*CRYSTAL_W, h: CRYSTAL_H, side:'top' };
+    }
+
     if (lv === 1) {
-        // ─── NIVEAU 1 : 2 flips ─────────────────────────────────────────
-        // Plafond → passer zone 1 → sol → plafond → passer zone 2 → goal
+        // ── NIVEAU 1 : 2 flips ───────────────────────────────────────────────
+        //  Aucun cristal plafond. 2 zones cristaux sol.
+        //  Schéma : sol → ↑ plafond → ↑ franchir cristaux → ↓ sol → ↑ plafond → ↓ goal
+        const p1x = W*0.08|0, p1w = W*0.26|0;   //  8% – 34%
+        const p2x = W*0.43|0, p2w = W*0.26|0;   // 43% – 69%
+
         platforms = [
             floorPlat,
-            { x: 210, y: CEIL_Y, w: 300, h: CEIL_H },   // Plafond 1
-            { x: 640, y: CEIL_Y, w: 280, h: CEIL_H },   // Plafond 2
-            { x: 1000, y: CEIL_Y, w: 260, h: CEIL_H },  // Plafond 3
+            makeCeilPlat(p1x, p1w),   // Plafond 1
+            makeCeilPlat(p2x, p2w),   // Plafond 2
         ];
+
+        // Cristaux au CENTRE-GAUCHE de chaque plateforme (entrée=28%, cristaux=37%, sortie=35%)
         hazards = [
-            { x: 255, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 670, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 1020, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            makeFloorCrystals(p1x, p1w, 0.28, 2),
+            makeFloorCrystals(p2x, p2w, 0.28, 2),
         ];
-        goal.x = canvas.width - 180;
-        goal.y = floorY - 110;
+
+        goal.x = W - 190; goal.y = floorY - 110;
 
     } else if (lv === 2) {
-        // ─── NIVEAU 2 : 4 flips + cristaux plafond ──────────────────────
-        // Plafonds plus courts, obstacles au plafond entre les plateformes
+        // ── NIVEAU 2 : 3 flips + 1 cristal plafond ──────────────────────────
+        //  Un cristal plafond au milieu de la 2e plateforme force à basculer
+        //  au bon moment (avant d'atteindre le cristal).
+        const p1x = W*0.07|0, p1w = W*0.23|0;   //  7% – 30%
+        const p2x = W*0.37|0, p2w = W*0.26|0;   // 37% – 63%
+        const p3x = W*0.68|0, p3w = W*0.22|0;   // 68% – 90%
+
         platforms = [
             floorPlat,
-            { x: 170, y: CEIL_Y, w: 240, h: CEIL_H },
-            { x: 530, y: CEIL_Y, w: 210, h: CEIL_H },
-            { x: 840, y: CEIL_Y, w: 210, h: CEIL_H },
-            { x: 1130, y: CEIL_Y, w: 210, h: CEIL_H },
+            makeCeilPlat(p1x, p1w),
+            makeCeilPlat(p2x, p2w),
+            makeCeilPlat(p3x, p3w),
         ];
+
         hazards = [
-            // Sol
-            { x: 210, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 560, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 860, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 1150, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            // Plafond : entre les plateformes, force à redescendre
-            { x: 410, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-            { x: 750, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-            { x: 1060, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+            // Cristaux sol (légèrement plus larges qu'au niveau 1)
+            makeFloorCrystals(p1x, p1w, 0.27, 2),
+            makeFloorCrystals(p2x, p2w, 0.22, 2),
+            makeFloorCrystals(p3x, p3w, 0.24, 2),
+            // Cristal plafond sur p2 (côté droit) → force le basculement avant
+            makeCeilCrystals(p2x, p2w, 0.72, 1),
         ];
-        goal.x = canvas.width - 180;
-        goal.y = floorY - 110;
+
+        goal.x = W - 190; goal.y = floorY - 110;
 
     } else {
-        // ─── NIVEAU 3 : 5 flips, obstacles denses ───────────────────────
+        // ── NIVEAU 3 : 4 flips + cristaux plafond sur 3 plateformes ─────────
+        //  Cristaux plafond contraignent le joueur à basculer dans une fenêtre précise.
+        const p1x = W*0.06|0, p1w = W*0.20|0;   //  6% – 26%
+        const p2x = W*0.32|0, p2w = W*0.20|0;   // 32% – 52%
+        const p3x = W*0.58|0, p3w = W*0.20|0;   // 58% – 78%
+        const p4x = W*0.83|0, p4w = W*0.13|0;   // 83% – 96%
+
         platforms = [
             floorPlat,
-            { x: 140, y: CEIL_Y, w: 210, h: CEIL_H },
-            { x: 450, y: CEIL_Y, w: 190, h: CEIL_H },
-            { x: 750, y: CEIL_Y, w: 190, h: CEIL_H },
-            { x: 1040, y: CEIL_Y, w: 200, h: CEIL_H },
-            { x: 1330, y: CEIL_Y, w: 180, h: CEIL_H },
+            makeCeilPlat(p1x, p1w),
+            makeCeilPlat(p2x, p2w),
+            makeCeilPlat(p3x, p3w),
+            makeCeilPlat(p4x, p4w),
         ];
+
         hazards = [
-            // Sol (dense)
-            { x: 185, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 485, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 785, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 1080, y: floorY - CRYSTAL_H, w: 4 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: 1360, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            // Plafond (dense)
-            { x: 350, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-            { x: 640, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-            { x: 940, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-            { x: 1230, y: CEIL_Y + CEIL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+            // Cristaux sol (3 cristaux = plus difficile)
+            makeFloorCrystals(p1x, p1w, 0.20, 2),
+            makeFloorCrystals(p2x, p2w, 0.20, 3),
+            makeFloorCrystals(p3x, p3w, 0.20, 3),
+            makeFloorCrystals(p4x, p4w, 0.18, 2),
+            // Cristaux plafond sur p1, p2, p3 (côté droit)
+            makeCeilCrystals(p1x, p1w, 0.70, 1),
+            makeCeilCrystals(p2x, p2w, 0.68, 1),
+            makeCeilCrystals(p3x, p3w, 0.68, 1),
         ];
-        goal.x = canvas.width - 160;
-        goal.y = floorY - 110;
+
+        goal.x = W - 180; goal.y = floorY - 110;
     }
 }
 
-// --- SOL EN TILING ---
+// ─── SOL EN TILING ───────────────────────────────────────────────────────────
 function drawStaticFloor() {
-    if (!platImg.complete || platImg.naturalWidth === 0) return;
-    const tileW = platImg.naturalWidth;
-    const tileH = 65;
-    const yPos  = canvas.height - tileH;
-    for (let x = 0; x < canvas.width; x += tileW) {
-        ctx.drawImage(platImg, x, yPos, tileW, tileH);
-    }
+    if (!platImg.complete || !platImg.naturalWidth) return;
+    const tW = platImg.naturalWidth, tH = 65, yPos = canvas.height - tH;
+    for (let x = 0; x < canvas.width; x += tW) ctx.drawImage(platImg, x, yPos, tW, tH);
 }
 
-// --- MENU ---
-function showMenu() {
-    gameState = 'MENU';
-    document.getElementById('gameMenu').style.display = 'block';
-}
+// ─── MENU ────────────────────────────────────────────────────────────────────
+function showMenu()   { gameState = 'MENU'; document.getElementById('gameMenu').style.display = 'block'; }
+function startGame(lv){ document.getElementById('gameMenu').style.display = 'none'; gameState = 'PLAYING'; loadLevel(lv); }
+function resetGame(msg){ if (msg) alert(msg); loadLevel(currentLevel); }
 
-function startGame(lv) {
-    document.getElementById('gameMenu').style.display = 'none';
-    gameState = 'PLAYING';
-    loadLevel(lv);
-}
-
-function resetGame(msg) {
-    if (msg) alert(msg);
-    loadLevel(currentLevel);
-}
-
-// --- BOUCLE PRINCIPALE ---
+// ─── BOUCLE PRINCIPALE ───────────────────────────────────────────────────────
 function update() {
     if (gameState !== 'PLAYING') { draw(); requestAnimationFrame(update); return; }
 
+    // Déplacement horizontal
     let nextX = player.x;
     player.isMoving = false;
-    if (keys['ArrowRight']) { nextX += player.speed; player.isMoving = true; player.facingRight = true; }
+    if (keys['ArrowRight']) { nextX += player.speed; player.isMoving = true; player.facingRight = true;  }
     if (keys['ArrowLeft'])  { nextX -= player.speed; player.isMoving = true; player.facingRight = false; }
 
-    // Collision horizontale
     let canMoveX = true;
     platforms.forEach(p => {
-        if (nextX < p.x + p.w && nextX + player.width > p.x &&
-            player.y < p.y + p.h && player.y + player.height > p.y) canMoveX = false;
+        if (nextX < p.x+p.w && nextX+player.width > p.x && player.y < p.y+p.h && player.y+player.height > p.y)
+            canMoveX = false;
     });
     if (canMoveX) player.x = nextX;
 
-    // Animation
-    if (player.isMoving && player.onSurface) {
-        player.currentFrame = (player.currentFrame + player.animationSpeed) % walkFrames.length;
-    } else {
-        player.currentFrame = 0;
-    }
+    // Animation marche
+    player.currentFrame = (player.isMoving && player.onSurface)
+        ? (player.currentFrame + player.animationSpeed) % walkFrames.length
+        : 0;
 
-    // Bornes
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
-    // Gravité + collision verticale
-    player.velY += gravity * gravityDirection;
-    player.y += player.velY;
+    // Gravité
+    player.velY += GRAVITY * gravityDirection;
+    player.y    += player.velY;
     player.onSurface = false;
 
+    // Collision verticale avec les plateformes
     platforms.forEach(p => {
-        if (player.x < p.x + p.w && player.x + player.width > p.x &&
-            player.y < p.y + p.h && player.y + player.height > p.y) {
+        if (player.x < p.x+p.w && player.x+player.width > p.x && player.y < p.y+p.h && player.y+player.height > p.y) {
             if (gravityDirection === 1) {
                 if (player.velY >= 0) { player.y = p.y - player.height; player.velY = 0; player.onSurface = true; }
-                else                  { player.y = p.y + p.h;          player.velY = 0; }
+                else                  { player.y = p.y + p.h;           player.velY = 0; }
             } else {
-                if (player.velY <= 0) { player.y = p.y + p.h;          player.velY = 0; player.onSurface = true; }
-                else                  { player.y = p.y - player.height; player.velY = 0; }
+                if (player.velY <= 0) { player.y = p.y + p.h;           player.velY = 0; player.onSurface = true; }
+                else                  { player.y = p.y - player.height;  player.velY = 0; }
             }
         }
     });
 
-    // Piques
+    // Collision cristaux — hitbox réduite (plus indulgente)
     hazards.forEach(h => {
-        if (player.x < h.x + h.w && player.x + player.width > h.x &&
-            player.y < h.y + h.h && player.y + player.height > h.y) {
+        const hx  = h.x  + HBOX_MX,      hw = h.w - 2*HBOX_MX;
+        const hy  = h.y  + HBOX_MY,      hh = h.h -   HBOX_MY;
+        const px  = player.x  + 8,       pw = player.width  - 16;
+        const py  = player.y  + 8,       ph = player.height - 16;
+        if (px < hx+hw && px+pw > hx && py < hy+hh && py+ph > hy)
             resetGame("Le Néant vous a rattrapé...");
-        }
     });
 
-    // Sortie écran
-    if (player.y < -200 || player.y > canvas.height + 200) {
-        resetGame("Perdu dans l'éther...");
-    }
+    // Mort hors écran
+    if (player.y < -200 || player.y > canvas.height + 200) resetGame("Perdu dans l'éther...");
 
-    // Objectif
-    if (player.x < goal.x + goal.w && player.x + player.width > goal.x &&
-        player.y < goal.y + goal.h && player.y + player.height > goal.y) {
-        if (currentLevel < 3) {
-            alert(`Niveau ${currentLevel} réussi !`);
-            loadLevel(currentLevel + 1);
-        } else {
-            alert("Incroyable ! Vous êtes le Maître de la Gravité !");
-            showMenu();
-        }
+    // Objectif atteint
+    if (player.x < goal.x+goal.w && player.x+player.width > goal.x &&
+        player.y < goal.y+goal.h && player.y+player.height > goal.y) {
+        if (currentLevel < 3) { alert(`Niveau ${currentLevel} réussi !`); loadLevel(currentLevel+1); }
+        else                  { alert("Incroyable ! Vous êtes le Maître de la Gravité !"); showMenu(); }
     }
 
     draw();
     requestAnimationFrame(update);
 }
 
-// --- RENDU ---
+// ─── RENDU ───────────────────────────────────────────────────────────────────
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -268,27 +255,25 @@ function draw() {
 
     drawStaticFloor();
 
-    // Plateformes (hors sol)
+    // Plateformes plafond
     platforms.forEach(p => {
         if (p.isFloor) return;
         if (platImg.complete) ctx.drawImage(platImg, p.x, p.y, p.w, p.h);
     });
 
-    // Cristaux — toujours à leur taille naturelle (CRYSTAL_W x CRYSTAL_H)
+    // Cristaux — rendu à taille naturelle, jamais étirés
     hazards.forEach(h => {
         if (!picsImg.complete) return;
         const count = Math.ceil(h.w / CRYSTAL_W);
         for (let i = 0; i < count; i++) {
-            const drawX = h.x + i * CRYSTAL_W;
+            const dx = h.x + i*CRYSTAL_W;
             ctx.save();
             if (h.side === 'top') {
-                // Accroché au plafond : retourné verticalement
-                ctx.translate(drawX + CRYSTAL_W / 2, h.y + CRYSTAL_H / 2);
+                ctx.translate(dx + CRYSTAL_W/2, h.y + CRYSTAL_H/2);
                 ctx.scale(1, -1);
-                ctx.drawImage(picsImg, -CRYSTAL_W / 2, -CRYSTAL_H / 2, CRYSTAL_W, CRYSTAL_H);
+                ctx.drawImage(picsImg, -CRYSTAL_W/2, -CRYSTAL_H/2, CRYSTAL_W, CRYSTAL_H);
             } else {
-                // Posé au sol : sens normal
-                ctx.drawImage(picsImg, drawX, h.y, CRYSTAL_W, CRYSTAL_H);
+                ctx.drawImage(picsImg, dx, h.y, CRYSTAL_W, CRYSTAL_H);
             }
             ctx.restore();
         }
@@ -298,25 +283,23 @@ function draw() {
     if (flagImg.complete) ctx.drawImage(flagImg, goal.x, goal.y, goal.w, goal.h);
 
     // Joueur
-    if (walkFrames[0] && walkFrames[0].complete) {
+    if (walkFrames[0]?.complete) {
         ctx.save();
-        ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+        ctx.translate(player.x + player.width/2, player.y + player.height/2);
         ctx.scale(player.facingRight ? 1 : -1, gravityDirection === -1 ? -1 : 1);
         ctx.drawImage(walkFrames[Math.floor(player.currentFrame)],
-            -player.width / 2, -player.height / 2, player.width, player.height);
+            -player.width/2, -player.height/2, player.width, player.height);
         ctx.restore();
     }
 
     // HUD
-    ctx.fillStyle = "white";
-    ctx.font = "italic 22px 'Palatino Linotype', serif";
-    ctx.textAlign = "center";
-    ctx.shadowBlur = 8; ctx.shadowColor = "black";
-    ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width / 2, canvas.height - 20);
+    ctx.fillStyle = "white"; ctx.font = "italic 22px 'Palatino Linotype', serif";
+    ctx.textAlign = "center"; ctx.shadowBlur = 8; ctx.shadowColor = "black";
+    ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width/2, canvas.height - 20);
     ctx.shadowBlur = 0;
 }
 
-// --- CONTRÔLES ---
+// ─── CONTRÔLES ───────────────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
     if (e.code === 'Space' && player.onSurface && gameState === 'PLAYING') {
@@ -328,11 +311,11 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// --- MENU ---
+// ─── MENU HTML ───────────────────────────────────────────────────────────────
 document.body.insertAdjacentHTML('beforeend', `
 <div id="gameMenu" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-text-align:center;background:rgba(0,0,0,0.85);padding:50px;border-radius:20px;
-border:2px solid gold;box-shadow:0 0 20px gold;font-family:'Palatino Linotype',serif;z-index:100;">
+  text-align:center;background:rgba(0,0,0,0.85);padding:50px;border-radius:20px;
+  border:2px solid gold;box-shadow:0 0 20px gold;font-family:'Palatino Linotype',serif;z-index:100;">
   <h1 style="color:gold;margin-bottom:30px;font-size:3em;text-shadow:2px 2px black;">Gravity Wizard</h1>
   <button onclick="startGame(1)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid gold;border-radius:5px;font-size:1.2em;">✨ Nouvelle Partie</button>
   <button onclick="startGame(2)" style="display:block;width:280px;margin:15px auto;padding:15px;cursor:pointer;background:#444;color:white;border:1px solid #aaa;border-radius:5px;font-size:1.2em;">⚡ Chapitre 2</button>
