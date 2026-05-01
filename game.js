@@ -43,6 +43,7 @@ const CRYSTAL_H = 70;
 const PLAT_W    = 320;    // Taille fixe des plateformes (taille naturelle des assets)
 const PLAT_H    = 60;
 const FLOOR_H   = 65;
+const WINTER_FLOOR_VISUAL_OFFSET = 18; // Remonte uniquement le rendu du sol hiver sous les pieds du joueur
 const HBOX_MX   = 20;     // Tolérance hitbox cristaux (horizontal)
 const HBOX_MY   = 18;     // Tolérance hitbox cristaux (vertical)
 
@@ -188,10 +189,15 @@ function loadLevel(lv) {
 // ─── SOL EN TILING ───────────────────────────────────────────────────────────
 function drawStaticFloor(img) {
     if (!img.complete || !img.naturalWidth) return;
+
+    const isWinterFloor = currentLevel === 4 && img === floorWinterImg;
     const tW = img.naturalWidth;
     const tH = FLOOR_H;
-    const yPos = canvas.height - tH;
-    for (let x = 0; x < canvas.width; x += tW) ctx.drawImage(img, x, yPos, tW, tH);
+    const yPos = canvas.height - tH - (isWinterFloor ? WINTER_FLOOR_VISUAL_OFFSET : 0);
+
+    for (let x = 0; x < canvas.width; x += tW) {
+        ctx.drawImage(img, x, yPos, tW, tH);
+    }
 }
 
 function updatePlayerAnimation() {
