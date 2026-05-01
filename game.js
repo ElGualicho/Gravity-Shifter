@@ -1,38 +1,41 @@
 const canvas = document.getElementById('gameCanvas');
-const ctx    = canvas.getContext('2d');
+const ctx = canvas.getContext('2d');
 
-const menuEl        = document.getElementById('gameMenu');
-const gameOverEl    = document.getElementById('gameOver');
-const gameOverText  = document.getElementById('gameOverText');
+const menuEl = document.getElementById('gameMenu');
+const gameOverEl = document.getElementById('gameOver');
+const gameOverText = document.getElementById('gameOverText');
 
-let gameState        = 'MENU';
-let currentLevel     = 1;
+let gameState = 'MENU';
+let currentLevel = 1;
 let gravityDirection = 1;
-let keys             = {};
+let keys = {};
 
-function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-window.addEventListener('resize', () => { resizeCanvas(); loadLevel(currentLevel); });
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', () => {
+    resizeCanvas();
+    loadLevel(currentLevel);
+});
 resizeCanvas();
 
 // ─── ASSETS ──────────────────────────────────────────────────────────────────
 let imagesLoaded = 0;
-// Niveaux 1-3 : fond naturel
-const backgroundImg    = new Image(); backgroundImg.src    = 'assets/background.png';        backgroundImg.onload    = () => imagesLoaded++;
-// Niveau 4 : fond hivernal
-const bgWinterImg      = new Image(); bgWinterImg.src      = 'assets/background_winter.png'; bgWinterImg.onload      = () => imagesLoaded++;
-const floorWinterImg   = new Image(); floorWinterImg.src   = 'assets/floor_winter.png';      floorWinterImg.onload   = () => imagesLoaded++;
-// Plateformes
-const platImg          = new Image(); platImg.src          = 'assets/platform1.png';         platImg.onload          = () => imagesLoaded++;
-const platImg2         = new Image(); platImg2.src         = 'assets/platform2.png';         platImg2.onload         = () => imagesLoaded++;
-// Autres
-const flagImg          = new Image(); flagImg.src          = 'assets/flag.png';              flagImg.onload          = () => imagesLoaded++;
-const picsImg          = new Image(); picsImg.src          = 'assets/pics.png';              picsImg.onload          = () => imagesLoaded++;
+const backgroundImg = new Image(); backgroundImg.src = 'assets/background.png'; backgroundImg.onload = () => imagesLoaded++;
+const bgWinterImg = new Image(); bgWinterImg.src = 'assets/background_winter.png'; bgWinterImg.onload = () => imagesLoaded++;
+const floorWinterImg = new Image(); floorWinterImg.src = 'assets/floor_winter.png'; floorWinterImg.onload = () => imagesLoaded++;
+const platImg = new Image(); platImg.src = 'assets/platform1.png'; platImg.onload = () => imagesLoaded++;
+const platImg2 = new Image(); platImg2.src = 'assets/platform2.png'; platImg2.onload = () => imagesLoaded++;
+const flagImg = new Image(); flagImg.src = 'assets/flag.png'; flagImg.onload = () => imagesLoaded++;
+const picsImg = new Image(); picsImg.src = 'assets/pics.png'; picsImg.onload = () => imagesLoaded++;
 
-// Animation joueur : les 4 frames doivent rester utilisées pendant les déplacements.
-const walkFrames       = [];
-['walk1.png','walk2.png','walk3.png','walk4.png'].forEach((n, i) => {
-    const img = new Image(); img.src = `assets/${n}`; img.onload = () => imagesLoaded++;
-    walkFrames[i] = img;
+const walkFrames = [];
+['walk1.png', 'walk2.png', 'walk3.png', 'walk4.png'].forEach((name, index) => {
+    const img = new Image();
+    img.src = `assets/${name}`;
+    img.onload = () => imagesLoaded++;
+    walkFrames[index] = img;
 });
 
 // ─── CONSTANTES PHYSIQUE ─────────────────────────────────────────────────────
@@ -40,163 +43,145 @@ const PLAYER_W = 75;
 const PLAYER_H = 95;
 const CRYSTAL_W = 65;
 const CRYSTAL_H = 70;
-const PLAT_W    = 320;    // Taille fixe des plateformes (taille naturelle des assets)
-const PLAT_H    = 60;
-const FLOOR_H   = 65;
-const WINTER_FLOOR_VISUAL_OFFSET = 18; // Remonte uniquement le rendu du sol hiver sous les pieds du joueur
-const HBOX_MX   = 20;     // Tolérance hitbox cristaux (horizontal)
-const HBOX_MY   = 18;     // Tolérance hitbox cristaux (vertical)
+const PLAT_W = 320;
+const PLAT_H = 60;
+const FLOOR_H = 65;
+const WINTER_FLOOR_H = 85; // floor_winter.png = 1672 x 85 px
+const HBOX_MX = 20;
+const HBOX_MY = 18;
 
-// Mouvement fluide
-const GRAVITY   = 0.8;    // Accélération gravitationnelle
-const MAX_VY    = 13;     // Vitesse terminale verticale (évite les chutes brutales)
-const MAX_VX    = 9;      // Vitesse max horizontale
-const ACCEL     = 1.3;    // Accélération au démarrage
-const FRIC      = 0.78;   // Friction à l'arrêt (douceur de décélération)
-const FLIP_OFFSET = 12;   // Décalage anti-recollision après inversion
+const GRAVITY = 0.8;
+const MAX_VY = 13;
+const MAX_VX = 9;
+const ACCEL = 1.3;
+const FRIC = 0.78;
+const FLIP_OFFSET = 12;
 
 const player = {
-    x: 100, y: 300, width: PLAYER_W, height: PLAYER_H,
-    velX: 0, velY: 0, onSurface: false,
-    currentFrame: 0, animationSpeed: 0.2,
-    isMoving: false, facingRight: true
+    x: 100,
+    y: 300,
+    width: PLAYER_W,
+    height: PLAYER_H,
+    velX: 0,
+    velY: 0,
+    onSurface: false,
+    currentFrame: 0,
+    animationSpeed: 0.2,
+    isMoving: false,
+    facingRight: true
 };
 
-let platforms = [], hazards = [], goal = { x:0, y:0, w:100, h:110 };
+let platforms = [];
+let hazards = [];
+let goal = { x: 0, y: 0, w: 100, h: 110 };
 
-// ─── NIVEAUX ─────────────────────────────────────────────────────────────────
-//
-//  Mécanique : Espace (au sol) → bascule la gravité.
-//   dir= 1 → tombe BAS    → pose sur le DESSUS des plateformes
-//   dir=-1 → monte HAUT   → accroche au DESSOUS des plateformes
-//
-//  Structure d'une section :
-//   [Entrée] sol libre  → on peut basculer vers la plateforme cible
-//   [Cristaux] sol mort → DOIT être en hauteur
-//   [Sortie] sol libre  → atterrissage sûr après le basculement
-//
-//  Niveaux :
-//   1 → 2 flips  | sol + plafond (apprentissage)
-//   2 → 3 flips  | +1 plateforme milieu
-//   3 → 4 flips  | +2 plateformes milieu à hauteurs différentes
-//   4 → 5 flips  | thème acier/hiver, sol dédié, overlaps lisibles
-//
+function getFloorHeight(level = currentLevel) {
+    return level === 4 ? WINTER_FLOOR_H : FLOOR_H;
+}
+
 function loadLevel(lv) {
     keys = {};
-    player.velX  = 0;
-    player.velY  = 0;
+    player.velX = 0;
+    player.velY = 0;
     player.currentFrame = 0;
     player.isMoving = false;
     gravityDirection = 1;
     currentLevel = lv;
     player.x = 100;
 
-    const W      = canvas.width;
-    const H      = canvas.height;
-    const floorY = H - FLOOR_H;
+    const W = canvas.width;
+    const H = canvas.height;
+    const floorH = getFloorHeight(lv);
+    const floorY = H - floorH;
     const CEIL_Y = 40;
-    const fp     = { x:0, y:floorY, w:W*2, h:100, isFloor:true };
+    const fp = { x: 0, y: floorY, w: W * 2, h: 120, isFloor: true };
     player.y = floorY - PLAYER_H - 2;
 
     if (lv === 1) {
-        // ── N1 : 2 flips ─────────────────────────────────────────────────────
-        const c1x = W * 0.08 | 0,  c2x = W * 0.48 | 0;
-        platforms = [ fp,
-            { x:c1x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },
-            { x:c2x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },
+        const c1x = W * 0.08 | 0;
+        const c2x = W * 0.48 | 0;
+        platforms = [fp,
+            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
         ];
         hazards = [
-            { x:c1x+80,  y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            { x:c2x+80,  y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
+            { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: c2x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
         ];
-        goal.x = c2x + PLAT_W + 150;  goal.y = floorY - 110;
-
+        goal.x = c2x + PLAT_W + 150;
+        goal.y = floorY - 110;
     } else if (lv === 2) {
-        // ── N2 : 3 flips + 1 milieu ──────────────────────────────────────────
-        //  sol → plafond1 → milieu → plafond2 → sol → goal
-        const c1x = W*0.07|0,  m1x = W*0.28|0, m1y = H*0.40|0,  c2x = W*0.47|0;
-        platforms = [ fp,
-            { x:c1x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },
-            { x:m1x, y:m1y,   w:PLAT_W, h:PLAT_H },
-            { x:c2x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },
+        const c1x = W * 0.07 | 0;
+        const m1x = W * 0.28 | 0;
+        const m1y = H * 0.40 | 0;
+        const c2x = W * 0.47 | 0;
+        platforms = [fp,
+            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+            { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
+            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
         ];
         hazards = [
-            { x:c1x+80,  y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            { x:m1x+40,  y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            { x:c2x+60,  y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            // Cristal plafond en fin de c2 → force un basculement au bon moment
-            { x:c2x+250, y:CEIL_Y+PLAT_H,    w:CRYSTAL_W,   h:CRYSTAL_H, side:'top'    },
+            { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: m1x + 40, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: c2x + 60, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: c2x + 250, y: CEIL_Y + PLAT_H, w: CRYSTAL_W, h: CRYSTAL_H, side: 'top' }
         ];
-        goal.x = c2x + PLAT_W + 150;  goal.y = floorY - 110;
-
+        goal.x = c2x + PLAT_W + 150;
+        goal.y = floorY - 110;
     } else if (lv === 3) {
-        // ── N3 : 4 flips + 2 milieux à hauteurs différentes ──────────────────
-        //  sol → c1 → milieu1 → c2 → milieu2 → sol → goal
-        const c1x = W*0.07|0,
-              m1x = W*0.27|0, m1y = H*0.40|0,
-              c2x = W*0.46|0,
-              m2x = W*0.65|0, m2y = H*0.52|0;
-        platforms = [ fp,
-            { x:c1x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },
-            { x:m1x, y:m1y,   w:PLAT_W, h:PLAT_H },
-            { x:c2x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },
-            { x:m2x, y:m2y,   w:PLAT_W, h:PLAT_H },
+        const c1x = W * 0.07 | 0;
+        const m1x = W * 0.27 | 0;
+        const m1y = H * 0.40 | 0;
+        const c2x = W * 0.46 | 0;
+        const m2x = W * 0.65 | 0;
+        const m2y = H * 0.52 | 0;
+        platforms = [fp,
+            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+            { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
+            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+            { x: m2x, y: m2y, w: PLAT_W, h: PLAT_H }
         ];
         hazards = [
-            { x:c1x+70, y:floorY-CRYSTAL_H, w:3*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            { x:m1x+50, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            { x:c2x+70, y:floorY-CRYSTAL_H, w:3*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            { x:m2x+50, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
+            { x: c1x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: m1x + 50, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: c2x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: m2x + 50, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
         ];
-        goal.x = m2x + PLAT_W + 20;  goal.y = floorY - 110;
-
+        goal.x = m2x + PLAT_W + 20;
+        goal.y = floorY - 110;
     } else {
-        // ── N4 : lecture de niveau retravaillée ──────────────────────────────
-        // Intentions level design :
-        // 1. sol dédié winter = repère stable et continu ;
-        // 2. plateformes flottantes = appuis courts, jamais utilisées comme sol continu ;
-        // 3. overlaps horizontaux explicites pour garantir les transitions ;
-        // 4. progression en 5 flips : sol → c1 → sol → c2 → milieu → c3 → sol.
-        const c1x = W*0.09|0;
-        const c2x = W*0.34|0;
-        const m1x = W*0.49|0;
-        const c3x = W*0.62|0;
-        const m1y = H*0.47|0;
+        const c1x = W * 0.09 | 0;
+        const c2x = W * 0.34 | 0;
+        const m1x = W * 0.49 | 0;
+        const c3x = W * 0.62 | 0;
+        const m1y = H * 0.47 | 0;
 
-        platforms = [ fp,
-            { x:c1x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 1 : premier apprentissage du niveau hiver
-            { x:c2x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 2 : reprise après retour au sol
-            { x:m1x, y:m1y,   w:PLAT_W, h:PLAT_H },    // Milieu : pont obligatoire entre c2 et c3
-            { x:c3x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 3 : sortie finale vers le drapeau
+        platforms = [fp,
+            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+            { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
+            { x: c3x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
         ];
-
         hazards = [
-            // Sous c1 : oblige le premier passage au plafond sans enfermer le spawn.
-            { x:c1x+90, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            // Sous c2 : bloque la traversée au sol et force le deuxième flip.
-            { x:c2x+70, y:floorY-CRYSTAL_H, w:3*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            // Sous le pont milieu : le sol devient dangereux, le joueur doit lire l'overlap c2 → milieu.
-            { x:m1x+70, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            // Finale : pousse à rester sur c3 jusqu'à la fenêtre de sortie.
-            { x:c3x+100, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
+            { x: c1x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: c2x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: m1x + 70, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+            { x: c3x + 100, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
         ];
-
         goal.x = Math.min(c3x + PLAT_W + 90, W - goal.w - 70);
         goal.y = floorY - 110;
     }
 }
 
-// ─── SOL EN TILING ───────────────────────────────────────────────────────────
 function drawStaticFloor(img) {
     if (!img.complete || !img.naturalWidth) return;
 
-    const isWinterFloor = currentLevel === 4 && img === floorWinterImg;
-    const tW = img.naturalWidth;
-    const tH = FLOOR_H;
-    const yPos = canvas.height - tH - (isWinterFloor ? WINTER_FLOOR_VISUAL_OFFSET : 0);
+    const floorH = getFloorHeight();
+    const yPos = canvas.height - floorH;
+    const tileWidth = img.naturalWidth;
 
-    for (let x = 0; x < canvas.width; x += tW) {
-        ctx.drawImage(img, x, yPos, tW, tH);
+    for (let x = 0; x < canvas.width; x += tileWidth) {
+        ctx.drawImage(img, x, yPos, tileWidth, floorH);
     }
 }
 
@@ -217,7 +202,6 @@ function getCurrentWalkFrame() {
     return frame?.complete && frame.naturalWidth ? frame : walkFrames[0];
 }
 
-// ─── INTERFACE ───────────────────────────────────────────────────────────────
 function setOverlayVisibility(menuVisible, gameOverVisible) {
     menuEl.classList.toggle('is-visible', menuVisible);
     gameOverEl.classList.toggle('is-visible', gameOverVisible);
@@ -255,16 +239,18 @@ function resetGame(msg) {
     showGameOver(msg);
 }
 
-// ─── BOUCLE PRINCIPALE ───────────────────────────────────────────────────────
 function update() {
-    if (gameState !== 'PLAYING') { draw(); requestAnimationFrame(update); return; }
+    if (gameState !== 'PLAYING') {
+        draw();
+        requestAnimationFrame(update);
+        return;
+    }
 
-    // ── Mouvement horizontal fluide (accélération + friction) ──
     if (keys['ArrowRight']) {
-        player.velX    = Math.min(player.velX + ACCEL, MAX_VX);
+        player.velX = Math.min(player.velX + ACCEL, MAX_VX);
         player.facingRight = true;
     } else if (keys['ArrowLeft']) {
-        player.velX    = Math.max(player.velX - ACCEL, -MAX_VX);
+        player.velX = Math.max(player.velX - ACCEL, -MAX_VX);
         player.facingRight = false;
     } else {
         player.velX *= FRIC;
@@ -272,52 +258,66 @@ function update() {
     }
 
     const nextX = player.x + Math.round(player.velX);
-
     let canMoveX = true;
     platforms.forEach(p => {
-        if (nextX < p.x+p.w && nextX+player.width > p.x &&
-            player.y < p.y+p.h && player.y+player.height > p.y)
+        if (nextX < p.x + p.w && nextX + player.width > p.x &&
+            player.y < p.y + p.h && player.y + player.height > p.y) {
             canMoveX = false;
+        }
     });
-    if (canMoveX) {
-        player.x = nextX;
-    } else {
-        player.velX = 0;   // stop à la collision
+
+    if (canMoveX) player.x = nextX;
+    else player.velX = 0;
+
+    if (player.x < 0) { player.x = 0; player.velX = 0; }
+    if (player.x + player.width > canvas.width) {
+        player.x = canvas.width - player.width;
+        player.velX = 0;
     }
 
-    if (player.x < 0)                          { player.x = 0;                          player.velX = 0; }
-    if (player.x + player.width > canvas.width) { player.x = canvas.width - player.width; player.velX = 0; }
-
-    // ── Gravité avec vitesse terminale (chute douce et bornée) ──
     player.velY += GRAVITY * gravityDirection;
-    player.velY  = Math.max(-MAX_VY, Math.min(MAX_VY, player.velY));
-    player.y    += player.velY;
+    player.velY = Math.max(-MAX_VY, Math.min(MAX_VY, player.velY));
+    player.y += player.velY;
     player.onSurface = false;
 
-    // Collisions verticales
     platforms.forEach(p => {
-        if (player.x < p.x+p.w && player.x+player.width > p.x &&
-            player.y < p.y+p.h && player.y+player.height > p.y) {
+        if (player.x < p.x + p.w && player.x + player.width > p.x &&
+            player.y < p.y + p.h && player.y + player.height > p.y) {
             if (gravityDirection === 1) {
-                if (player.velY >= 0) { player.y = p.y - player.height; player.velY = 0; player.onSurface = true; }
-                else                  { player.y = p.y + p.h;           player.velY = 0; }
+                if (player.velY >= 0) {
+                    player.y = p.y - player.height;
+                    player.velY = 0;
+                    player.onSurface = true;
+                } else {
+                    player.y = p.y + p.h;
+                    player.velY = 0;
+                }
             } else {
-                if (player.velY <= 0) { player.y = p.y + p.h;           player.velY = 0; player.onSurface = true; }
-                else                  { player.y = p.y - player.height;  player.velY = 0; }
+                if (player.velY <= 0) {
+                    player.y = p.y + p.h;
+                    player.velY = 0;
+                    player.onSurface = true;
+                } else {
+                    player.y = p.y - player.height;
+                    player.velY = 0;
+                }
             }
         }
     });
 
-    // Animation joueur après collisions : on utilise walk1 → walk4 uniquement si le joueur se déplace sur une surface.
     updatePlayerAnimation();
 
-    // Collision cristaux (hitbox réduite)
     for (const h of hazards) {
-        const hx = h.x+HBOX_MX, hw = h.w-2*HBOX_MX;
-        const hy = h.y+HBOX_MY, hh = h.h-HBOX_MY;
-        const px = player.x+8,  pw = player.width-16;
-        const py = player.y+8,  ph = player.height-16;
-        if (px < hx+hw && px+pw > hx && py < hy+hh && py+ph > hy) {
+        const hx = h.x + HBOX_MX;
+        const hw = h.w - 2 * HBOX_MX;
+        const hy = h.y + HBOX_MY;
+        const hh = h.h - HBOX_MY;
+        const px = player.x + 8;
+        const pw = player.width - 16;
+        const py = player.y + 8;
+        const ph = player.height - 16;
+
+        if (px < hx + hw && px + pw > hx && py < hy + hh && py + ph > hy) {
             resetGame("Le Néant vous a rattrapé...");
             draw();
             requestAnimationFrame(update);
@@ -325,31 +325,31 @@ function update() {
         }
     }
 
-    if (player.y < -200 || player.y > canvas.height+200) {
+    if (player.y < -200 || player.y > canvas.height + 200) {
         resetGame("Perdu dans l'éther...");
         draw();
         requestAnimationFrame(update);
         return;
     }
 
-    // Objectif
-    if (player.x < goal.x+goal.w && player.x+player.width > goal.x &&
-        player.y < goal.y+goal.h && player.y+player.height > goal.y) {
-        if (currentLevel < 4) { alert(`Niveau ${currentLevel} réussi !`); loadLevel(currentLevel+1); }
-        else { alert("Incroyable ! Vous êtes le Maître de la Gravité !"); showMenu(); }
+    if (player.x < goal.x + goal.w && player.x + player.width > goal.x &&
+        player.y < goal.y + goal.h && player.y + player.height > goal.y) {
+        if (currentLevel < 4) {
+            loadLevel(currentLevel + 1);
+        } else {
+            showMenu();
+        }
     }
 
     draw();
     requestAnimationFrame(update);
 }
 
-// ─── RENDU ───────────────────────────────────────────────────────────────────
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Assets selon le niveau
-    const bgImg       = currentLevel === 4 ? bgWinterImg : backgroundImg;
-    const curPlatImg  = currentLevel === 4 ? platImg2    : platImg;
+    const bgImg = currentLevel === 4 ? bgWinterImg : backgroundImg;
+    const curPlatImg = currentLevel === 4 ? platImg2 : platImg;
     const curFloorImg = currentLevel === 4 ? floorWinterImg : curPlatImg;
 
     if (bgImg.complete) {
@@ -362,18 +362,16 @@ function draw() {
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
         ctx.restore();
     }
+
     if (gameState === 'MENU') return;
 
-    // Sol en tiling : le niveau 4 utilise un asset dédié floor_winter.png.
     drawStaticFloor(curFloorImg.complete && curFloorImg.naturalWidth ? curFloorImg : curPlatImg);
 
-    // Plateformes flottantes
     platforms.forEach(p => {
         if (p.isFloor) return;
         if (curPlatImg.complete) ctx.drawImage(curPlatImg, p.x, p.y, p.w, p.h);
     });
 
-    // Cristaux — taille naturelle fixe
     hazards.forEach(h => {
         if (!picsImg.complete) return;
         const count = Math.ceil(h.w / CRYSTAL_W);
@@ -381,9 +379,9 @@ function draw() {
             const dx = h.x + i * CRYSTAL_W;
             ctx.save();
             if (h.side === 'top') {
-                ctx.translate(dx + CRYSTAL_W/2, h.y + CRYSTAL_H/2);
+                ctx.translate(dx + CRYSTAL_W / 2, h.y + CRYSTAL_H / 2);
                 ctx.scale(1, -1);
-                ctx.drawImage(picsImg, -CRYSTAL_W/2, -CRYSTAL_H/2, CRYSTAL_W, CRYSTAL_H);
+                ctx.drawImage(picsImg, -CRYSTAL_W / 2, -CRYSTAL_H / 2, CRYSTAL_W, CRYSTAL_H);
             } else {
                 ctx.drawImage(picsImg, dx, h.y, CRYSTAL_W, CRYSTAL_H);
             }
@@ -396,35 +394,41 @@ function draw() {
     const playerFrame = getCurrentWalkFrame();
     if (playerFrame?.complete) {
         ctx.save();
-        ctx.translate(player.x + player.width/2, player.y + player.height/2);
+        ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
         ctx.scale(player.facingRight ? 1 : -1, gravityDirection === -1 ? -1 : 1);
-        ctx.drawImage(playerFrame,
-            -player.width/2, -player.height/2, player.width, player.height);
+        ctx.drawImage(playerFrame, -player.width / 2, -player.height / 2, player.width, player.height);
         ctx.restore();
     }
 
-    ctx.fillStyle = "white"; ctx.font = "italic 22px 'Palatino Linotype', serif";
-    ctx.textAlign = "center"; ctx.shadowBlur = 8; ctx.shadowColor = "black";
-    ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width/2, canvas.height - 20);
+    const floorTop = canvas.height - getFloorHeight();
+    ctx.fillStyle = "white";
+    ctx.font = "italic 22px 'Palatino Linotype', serif";
+    ctx.textAlign = "center";
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "black";
+    ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width / 2, floorTop - 14);
     ctx.shadowBlur = 0;
 }
 
-// ─── CONTRÔLES ───────────────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
+
     if (e.code === 'Space' && player.onSurface && gameState === 'PLAYING') {
         gravityDirection *= -1;
-        player.onSurface  = false;
-        player.velX      *= 0.6;  // légère réduction d'élan lors du flip
-        player.velY       = gravityDirection * GRAVITY;
-        player.y         += gravityDirection * FLIP_OFFSET;
+        player.onSurface = false;
+        player.velX *= 0.6;
+        player.velY = gravityDirection * GRAVITY;
+        player.y += gravityDirection * FLIP_OFFSET;
     }
+
     if (e.code === 'Escape' && gameState === 'PLAYING') showMenu();
     if (gameState === 'GAME_OVER' && (e.code === 'Enter' || e.code === 'KeyR')) retryLevel();
     if (gameState === 'GAME_OVER' && e.code === 'Escape') showMenu();
 });
-window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// ─── INITIALISATION ──────────────────────────────────────────────────────────
+window.addEventListener('keyup', e => {
+    keys[e.code] = false;
+});
+
 showMenu();
 update();
