@@ -20,6 +20,7 @@ let imagesLoaded = 0;
 const backgroundImg    = new Image(); backgroundImg.src    = 'assets/background.png';        backgroundImg.onload    = () => imagesLoaded++;
 // Niveau 4 : fond hivernal
 const bgWinterImg      = new Image(); bgWinterImg.src      = 'assets/background_winter.png'; bgWinterImg.onload      = () => imagesLoaded++;
+const floorWinterImg   = new Image(); floorWinterImg.src   = 'assets/floor_winter.png';      floorWinterImg.onload   = () => imagesLoaded++;
 // Plateformes
 const platImg          = new Image(); platImg.src          = 'assets/platform1.png';         platImg.onload          = () => imagesLoaded++;
 const platImg2         = new Image(); platImg2.src         = 'assets/platform2.png';         platImg2.onload         = () => imagesLoaded++;
@@ -41,6 +42,7 @@ const CRYSTAL_W = 65;
 const CRYSTAL_H = 70;
 const PLAT_W    = 320;    // Taille fixe des plateformes (taille naturelle des assets)
 const PLAT_H    = 60;
+const FLOOR_H   = 65;
 const HBOX_MX   = 20;     // Tolérance hitbox cristaux (horizontal)
 const HBOX_MY   = 18;     // Tolérance hitbox cristaux (vertical)
 
@@ -76,7 +78,7 @@ let platforms = [], hazards = [], goal = { x:0, y:0, w:100, h:110 };
 //   1 → 2 flips  | sol + plafond (apprentissage)
 //   2 → 3 flips  | +1 plateforme milieu
 //   3 → 4 flips  | +2 plateformes milieu à hauteurs différentes
-//   4 → 5 flips  | thème acier/hiver, 3 plafonds + 1 milieu, cristaux plus denses
+//   4 → 5 flips  | thème acier/hiver, sol dédié, overlaps lisibles
 //
 function loadLevel(lv) {
     keys = {};
@@ -90,7 +92,7 @@ function loadLevel(lv) {
 
     const W      = canvas.width;
     const H      = canvas.height;
-    const floorY = H - 65;
+    const floorY = H - FLOOR_H;
     const CEIL_Y = 40;
     const fp     = { x:0, y:floorY, w:W*2, h:100, isFloor:true };
     player.y = floorY - PLAYER_H - 2;
@@ -148,41 +150,47 @@ function loadLevel(lv) {
         goal.x = m2x + PLAT_W + 20;  goal.y = floorY - 110;
 
     } else {
-        // ── N4 : 5 flips | acier + hiver ─────────────────────────────────────
-        //  Thème : platform2 + background_winter
-        //  Chemin : sol → c1 → sol → c2 → milieu1 → c3 → sol → goal
-        //
-        //  Contrainte clé : la plateforme milieu1 bloque l'accès direct à c3
-        //  depuis le sol (cristaux g4 barrent le passage en bas). Le joueur
-        //  DOIT utiliser c2 → milieu1 → c3 pour progresser.
-        const c1x = W*0.06|0,
-              c2x = W*0.34|0,
-              m1x = W*0.53|0, m1y = H*0.43|0,
-              c3x = W*0.65|0;
+        // ── N4 : lecture de niveau retravaillée ──────────────────────────────
+        // Intentions level design :
+        // 1. sol dédié winter = repère stable et continu ;
+        // 2. plateformes flottantes = appuis courts, jamais utilisées comme sol continu ;
+        // 3. overlaps horizontaux explicites pour garantir les transitions ;
+        // 4. progression en 5 flips : sol → c1 → sol → c2 → milieu → c3 → sol.
+        const c1x = W*0.09|0;
+        const c2x = W*0.34|0;
+        const m1x = W*0.49|0;
+        const c3x = W*0.62|0;
+        const m1y = H*0.47|0;
+
         platforms = [ fp,
-            { x:c1x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 1
-            { x:c2x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 2
-            { x:m1x, y:m1y,   w:PLAT_W, h:PLAT_H },   // Milieu (entre c2 et c3)
-            { x:c3x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 3
+            { x:c1x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 1 : premier apprentissage du niveau hiver
+            { x:c2x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 2 : reprise après retour au sol
+            { x:m1x, y:m1y,   w:PLAT_W, h:PLAT_H },    // Milieu : pont obligatoire entre c2 et c3
+            { x:c3x, y:CEIL_Y, w:PLAT_W, h:PLAT_H },   // Plafond 3 : sortie finale vers le drapeau
         ];
+
         hazards = [
-            // Groupe 1 (sous c1)
-            { x:c1x+80, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            // Groupe 2 (sous c2, 3 cristaux)
+            // Sous c1 : oblige le premier passage au plafond sans enfermer le spawn.
+            { x:c1x+90, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
+            // Sous c2 : bloque la traversée au sol et force le deuxième flip.
             { x:c2x+70, y:floorY-CRYSTAL_H, w:3*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            // Groupe 3 (sol, zone milieu1 → force à l'emprunter)
-            { x:m1x+50, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
-            // Groupe 4 (sous c3, 3 cristaux — finale difficile)
-            { x:c3x+70, y:floorY-CRYSTAL_H, w:3*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
+            // Sous le pont milieu : le sol devient dangereux, le joueur doit lire l'overlap c2 → milieu.
+            { x:m1x+70, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
+            // Finale : pousse à rester sur c3 jusqu'à la fenêtre de sortie.
+            { x:c3x+100, y:floorY-CRYSTAL_H, w:2*CRYSTAL_W, h:CRYSTAL_H, side:'bottom' },
         ];
-        goal.x = c3x + PLAT_W + 20;  goal.y = floorY - 110;
+
+        goal.x = Math.min(c3x + PLAT_W + 90, W - goal.w - 70);
+        goal.y = floorY - 110;
     }
 }
 
 // ─── SOL EN TILING ───────────────────────────────────────────────────────────
 function drawStaticFloor(img) {
     if (!img.complete || !img.naturalWidth) return;
-    const tW = img.naturalWidth, tH = 65, yPos = canvas.height - tH;
+    const tW = img.naturalWidth;
+    const tH = FLOOR_H;
+    const yPos = canvas.height - tH;
     for (let x = 0; x < canvas.width; x += tW) ctx.drawImage(img, x, yPos, tW, tH);
 }
 
@@ -336,6 +344,7 @@ function draw() {
     // Assets selon le niveau
     const bgImg       = currentLevel === 4 ? bgWinterImg : backgroundImg;
     const curPlatImg  = currentLevel === 4 ? platImg2    : platImg;
+    const curFloorImg = currentLevel === 4 ? floorWinterImg : curPlatImg;
 
     if (bgImg.complete) {
         ctx.save();
@@ -349,8 +358,8 @@ function draw() {
     }
     if (gameState === 'MENU') return;
 
-    // Sol en tiling (image adaptée au niveau)
-    drawStaticFloor(curPlatImg);
+    // Sol en tiling : le niveau 4 utilise un asset dédié floor_winter.png.
+    drawStaticFloor(curFloorImg.complete && curFloorImg.naturalWidth ? curFloorImg : curPlatImg);
 
     // Plateformes flottantes
     platforms.forEach(p => {
