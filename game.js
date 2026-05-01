@@ -1,10 +1,10 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
 
-let gameState       = 'MENU';
-let currentLevel    = 1;
+let gameState        = 'MENU';
+let currentLevel     = 1;
 let gravityDirection = 1;
-let keys            = {};
+let keys             = {};
 
 function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', () => { resizeCanvas(); loadLevel(currentLevel); });
@@ -17,24 +17,25 @@ const platImg       = new Image(); platImg.src       = 'assets/platform1.png';  
 const flagImg       = new Image(); flagImg.src       = 'assets/flag.png';       flagImg.onload       = () => imagesLoaded++;
 const picsImg       = new Image(); picsImg.src       = 'assets/pics.png';       picsImg.onload       = () => imagesLoaded++;
 const walkFrames    = [];
-['walk1.png','walk2.png','walk3.png','walk4.png'].forEach((n,i) => {
+['walk1.png','walk2.png','walk3.png','walk4.png'].forEach((n, i) => {
     const img = new Image(); img.src = `assets/${n}`; img.onload = () => imagesLoaded++;
     walkFrames[i] = img;
 });
 
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
-const PLAYER_W    = 75;
-const PLAYER_H    = 95;
-const CRYSTAL_W   = 65;   // Taille naturelle d'un cristal
-const CRYSTAL_H   = 70;
-const GRAVITY     = 0.5;
-// Marge de tolérance pour les hitbox des cristaux (rend le jeu plus juste)
-const HBOX_MX     = 20;   // marge horizontale par cristal
-const HBOX_MY     = 18;   // marge verticale (pointe du cristal)
+const PLAYER_W  = 75;
+const PLAYER_H  = 95;
+const CRYSTAL_W = 65;     // Taille naturelle d'un cristal
+const CRYSTAL_H = 70;
+const GRAVITY   = 0.8;    // ← chute plus rapide / dynamique
+const PLAT_W    = 320;    // Taille d'origine de platform1.png (fixe, jamais étiré)
+const PLAT_H    = 60;
+const HBOX_MX   = 20;     // Marge hitbox cristaux (horizontal)
+const HBOX_MY   = 18;     // Marge hitbox cristaux (vertical – pointe)
 
 const player = {
     x: 100, y: 300, width: PLAYER_W, height: PLAYER_H,
-    speed: 8,              // ← vitesse corrigée
+    speed: 9,
     velY: 0, onSurface: false,
     currentFrame: 0, animationSpeed: 0.2,
     isMoving: false, facingRight: true
@@ -44,124 +45,114 @@ let platforms = [], hazards = [], goal = { x:0, y:0, w:100, h:110 };
 
 // ─── NIVEAUX ─────────────────────────────────────────────────────────────────
 //
-//  Mécanique centrale :
-//    - Gravité normale  (dir= 1) → joueur posé sur le DESSUS des plateformes sol
-//    - Gravité inversée (dir=-1) → joueur accroché au DESSOUS des plateformes plafond
-//    - Espace (au sol seulement) → bascule de gravité
+//  Mécanique : Espace (au sol) bascule la gravité.
+//   dir= 1 → joueur tombe vers le BAS  → posé sur le DESSUS des plateformes
+//   dir=-1 → joueur monte vers le HAUT → accroché au DESSOUS des plateformes
 //
-//  Design de chaque segment :
-//    [ZONE ENTRÉE] sol libre → joueur peut basculer vers le plafond
-//    [CRISTAUX]    sol bloqué → joueur DOIT être au plafond
-//    [ZONE SORTIE] sol libre → joueur bascule en retombant sur le sol
+//  Chaque section est structurée :
+//   [Entrée] sol libre → joueur peut basculer vers la plateforme cible
+//   [Cristaux] sol bloqué → joueur DOIT être en hauteur
+//   [Sortie] sol libre → joueur bascule vers le bas et atterrit sans danger
+//
+//  Niveaux :
+//   1 → 2 flips, sol + plafond seulement (apprentissage)
+//   2 → 3 flips, +1 plateforme milieu (nouvel outil)
+//   3 → 4 flips, +2 plateformes milieu à hauteurs différentes (maîtrise)
 //
 function loadLevel(lv) {
-    keys = {}; player.velY = 0; gravityDirection = 1; currentLevel = lv;
+    keys = {};
+    player.velY = 0;
+    gravityDirection = 1;
+    currentLevel = lv;
     player.x = 100;
 
     const W      = canvas.width;
     const H      = canvas.height;
-    const floorY = H - 65;        // Hauteur du sol
-    const CEIL_Y = 40;            // Hauteur des plateformes plafond
-    const CEIL_H = 55;
+    const floorY = H - 65;
+    const CEIL_Y = 40;
 
-    const floorPlat = { x:0, y:floorY, w:W*2, h:100, isFloor:true };
+    const fp = { x:0, y:floorY, w:W*2, h:100, isFloor:true };
     player.y = floorY - PLAYER_H - 2;
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-    // Crée une plateforme plafond et ses cristaux sol associés.
-    //   px, pw  : position et largeur de la plateforme
-    //   cStart  : % du début des cristaux dans la plateforme (0..1)
-    //   cCount  : nombre de cristaux
-    function makeCeilPlat(px, pw) {
-        return { x: px|0, y: CEIL_Y, w: pw|0, h: CEIL_H };
-    }
-    function makeFloorCrystals(px, pw, cOffset, cCount) {
-        return { x: (px + pw*cOffset)|0, y: floorY - CRYSTAL_H, w: cCount*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' };
-    }
-    function makeCeilCrystals(px, pw, cOffset, cCount) {
-        return { x: (px + pw*cOffset)|0, y: CEIL_Y + CEIL_H, w: cCount*CRYSTAL_W, h: CRYSTAL_H, side:'top' };
-    }
-
     if (lv === 1) {
-        // ── NIVEAU 1 : 2 flips ───────────────────────────────────────────────
-        //  Aucun cristal plafond. 2 zones cristaux sol.
-        //  Schéma : sol → ↑ plafond → ↑ franchir cristaux → ↓ sol → ↑ plafond → ↓ goal
-        const p1x = W*0.08|0, p1w = W*0.26|0;   //  8% – 34%
-        const p2x = W*0.43|0, p2w = W*0.26|0;   // 43% – 69%
+        // ── NIVEAU 1 : 2 flips, pas de plateforme milieu ─────────────────────
+        const c1x = W * 0.08 | 0;
+        const c2x = W * 0.48 | 0;
 
         platforms = [
-            floorPlat,
-            makeCeilPlat(p1x, p1w),   // Plafond 1
-            makeCeilPlat(p2x, p2w),   // Plafond 2
+            fp,
+            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },  // Plafond 1
+            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },  // Plafond 2
         ];
 
-        // Cristaux au CENTRE-GAUCHE de chaque plateforme (entrée=28%, cristaux=37%, sortie=35%)
+        // Cristaux à ~25% dans chaque plat → large zone d'entrée ET de sortie
         hazards = [
-            makeFloorCrystals(p1x, p1w, 0.28, 2),
-            makeFloorCrystals(p2x, p2w, 0.28, 2),
+            { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
+            { x: c2x + 80, y: floorY - CRYSTAL_H, w: 2*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
         ];
 
-        goal.x = W - 190; goal.y = floorY - 110;
+        goal.x = c2x + PLAT_W + 150;
+        goal.y = floorY - 110;
 
     } else if (lv === 2) {
-        // ── NIVEAU 2 : 3 flips + 1 cristal plafond ──────────────────────────
-        //  Un cristal plafond au milieu de la 2e plateforme force à basculer
-        //  au bon moment (avant d'atteindre le cristal).
-        const p1x = W*0.07|0, p1w = W*0.23|0;   //  7% – 30%
-        const p2x = W*0.37|0, p2w = W*0.26|0;   // 37% – 63%
-        const p3x = W*0.68|0, p3w = W*0.22|0;   // 68% – 90%
+        // ── NIVEAU 2 : 3 flips + 1 plateforme milieu ─────────────────────────
+        //  Schéma : sol → plafond1 → MILIEU → plafond2 → sol → goal
+        //  Un cristal plafond en fin de plafond2 oblige à basculer au bon moment.
+        const c1x = W * 0.07 | 0;
+        const m1x = W * 0.28 | 0;  const m1y = H * 0.40 | 0;
+        const c2x = W * 0.47 | 0;
 
         platforms = [
-            floorPlat,
-            makeCeilPlat(p1x, p1w),
-            makeCeilPlat(p2x, p2w),
-            makeCeilPlat(p3x, p3w),
+            fp,
+            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },   // Plafond 1
+            { x: m1x, y: m1y,   w: PLAT_W, h: PLAT_H },   // Milieu 1
+            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },   // Plafond 2
         ];
 
         hazards = [
-            // Cristaux sol (légèrement plus larges qu'au niveau 1)
-            makeFloorCrystals(p1x, p1w, 0.27, 2),
-            makeFloorCrystals(p2x, p2w, 0.22, 2),
-            makeFloorCrystals(p3x, p3w, 0.24, 2),
-            // Cristal plafond sur p2 (côté droit) → force le basculement avant
-            makeCeilCrystals(p2x, p2w, 0.72, 1),
+            // Cristaux sol
+            { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
+            { x: m1x + 40, y: floorY - CRYSTAL_H, w: 2*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
+            { x: c2x + 60, y: floorY - CRYSTAL_H, w: 2*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
+            // Cristal plafond (fin de c2) → force un basculement vers le sol AVANT la fin
+            { x: c2x + 250, y: CEIL_Y + PLAT_H, w: CRYSTAL_W, h: CRYSTAL_H, side:'top' },
         ];
 
-        goal.x = W - 190; goal.y = floorY - 110;
+        goal.x = c2x + PLAT_W + 150;
+        goal.y = floorY - 110;
 
     } else {
-        // ── NIVEAU 3 : 4 flips + cristaux plafond sur 3 plateformes ─────────
-        //  Cristaux plafond contraignent le joueur à basculer dans une fenêtre précise.
-        const p1x = W*0.06|0, p1w = W*0.20|0;   //  6% – 26%
-        const p2x = W*0.32|0, p2w = W*0.20|0;   // 32% – 52%
-        const p3x = W*0.58|0, p3w = W*0.20|0;   // 58% – 78%
-        const p4x = W*0.83|0, p4w = W*0.13|0;   // 83% – 96%
+        // ── NIVEAU 3 : 4 flips + 2 plateformes milieu ────────────────────────
+        //  Schéma : sol → plafond1 → milieu1 → plafond2 → milieu2 → sol → goal
+        //  Milieu1 et milieu2 sont à des hauteurs différentes pour varier la navigation.
+        const c1x = W * 0.07 | 0;
+        const m1x = W * 0.27 | 0;  const m1y = H * 0.40 | 0;   // ~40% hauteur écran
+        const c2x = W * 0.46 | 0;
+        const m2x = W * 0.65 | 0;  const m2y = H * 0.52 | 0;   // ~52% hauteur écran (plus bas)
 
         platforms = [
-            floorPlat,
-            makeCeilPlat(p1x, p1w),
-            makeCeilPlat(p2x, p2w),
-            makeCeilPlat(p3x, p3w),
-            makeCeilPlat(p4x, p4w),
+            fp,
+            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+            { x: m1x, y: m1y,   w: PLAT_W, h: PLAT_H },
+            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+            { x: m2x, y: m2y,   w: PLAT_W, h: PLAT_H },
         ];
 
         hazards = [
-            // Cristaux sol (3 cristaux = plus difficile)
-            makeFloorCrystals(p1x, p1w, 0.20, 2),
-            makeFloorCrystals(p2x, p2w, 0.20, 3),
-            makeFloorCrystals(p3x, p3w, 0.20, 3),
-            makeFloorCrystals(p4x, p4w, 0.18, 2),
-            // Cristaux plafond sur p1, p2, p3 (côté droit)
-            makeCeilCrystals(p1x, p1w, 0.70, 1),
-            makeCeilCrystals(p2x, p2w, 0.68, 1),
-            makeCeilCrystals(p3x, p3w, 0.68, 1),
+            // Cristaux sol (groupes de 3 = plus difficile)
+            { x: c1x + 70, y: floorY - CRYSTAL_H, w: 3*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
+            { x: m1x + 50, y: floorY - CRYSTAL_H, w: 2*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
+            { x: c2x + 70, y: floorY - CRYSTAL_H, w: 3*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
+            { x: m2x + 50, y: floorY - CRYSTAL_H, w: 2*CRYSTAL_W, h: CRYSTAL_H, side:'bottom' },
         ];
 
-        goal.x = W - 180; goal.y = floorY - 110;
+        // Goal juste après la fin de m2 (joueur tombe de m2 → atterrit → goal)
+        goal.x = m2x + PLAT_W + 20;
+        goal.y = floorY - 110;
     }
 }
 
-// ─── SOL EN TILING ───────────────────────────────────────────────────────────
+// ─── SOL EN TILING (taille naturelle, jamais étiré) ──────────────────────────
 function drawStaticFloor() {
     if (!platImg.complete || !platImg.naturalWidth) return;
     const tW = platImg.naturalWidth, tH = 65, yPos = canvas.height - tH;
@@ -169,8 +160,8 @@ function drawStaticFloor() {
 }
 
 // ─── MENU ────────────────────────────────────────────────────────────────────
-function showMenu()   { gameState = 'MENU'; document.getElementById('gameMenu').style.display = 'block'; }
-function startGame(lv){ document.getElementById('gameMenu').style.display = 'none'; gameState = 'PLAYING'; loadLevel(lv); }
+function showMenu()    { gameState = 'MENU'; document.getElementById('gameMenu').style.display = 'block'; }
+function startGame(lv) { document.getElementById('gameMenu').style.display = 'none'; gameState = 'PLAYING'; loadLevel(lv); }
 function resetGame(msg){ if (msg) alert(msg); loadLevel(currentLevel); }
 
 // ─── BOUCLE PRINCIPALE ───────────────────────────────────────────────────────
@@ -190,7 +181,7 @@ function update() {
     });
     if (canMoveX) player.x = nextX;
 
-    // Animation marche
+    // Animation
     player.currentFrame = (player.isMoving && player.onSurface)
         ? (player.currentFrame + player.animationSpeed) % walkFrames.length
         : 0;
@@ -203,7 +194,7 @@ function update() {
     player.y    += player.velY;
     player.onSurface = false;
 
-    // Collision verticale avec les plateformes
+    // Collisions verticales
     platforms.forEach(p => {
         if (player.x < p.x+p.w && player.x+player.width > p.x && player.y < p.y+p.h && player.y+player.height > p.y) {
             if (gravityDirection === 1) {
@@ -216,12 +207,12 @@ function update() {
         }
     });
 
-    // Collision cristaux — hitbox réduite (plus indulgente)
+    // Collision cristaux (hitbox réduite = plus indulgente)
     hazards.forEach(h => {
-        const hx  = h.x  + HBOX_MX,      hw = h.w - 2*HBOX_MX;
-        const hy  = h.y  + HBOX_MY,      hh = h.h -   HBOX_MY;
-        const px  = player.x  + 8,       pw = player.width  - 16;
-        const py  = player.y  + 8,       ph = player.height - 16;
+        const hx = h.x + HBOX_MX,      hw = h.w - 2*HBOX_MX;
+        const hy = h.y + HBOX_MY,      hh = h.h -   HBOX_MY;
+        const px = player.x  + 8,      pw = player.width  - 16;
+        const py = player.y  + 8,      ph = player.height - 16;
         if (px < hx+hw && px+pw > hx && py < hy+hh && py+ph > hy)
             resetGame("Le Néant vous a rattrapé...");
     });
@@ -229,11 +220,11 @@ function update() {
     // Mort hors écran
     if (player.y < -200 || player.y > canvas.height + 200) resetGame("Perdu dans l'éther...");
 
-    // Objectif atteint
+    // Objectif
     if (player.x < goal.x+goal.w && player.x+player.width > goal.x &&
         player.y < goal.y+goal.h && player.y+player.height > goal.y) {
         if (currentLevel < 3) { alert(`Niveau ${currentLevel} réussi !`); loadLevel(currentLevel+1); }
-        else                  { alert("Incroyable ! Vous êtes le Maître de la Gravité !"); showMenu(); }
+        else { alert("Incroyable ! Vous êtes le Maître de la Gravité !"); showMenu(); }
     }
 
     draw();
@@ -250,39 +241,38 @@ function draw() {
         ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
         ctx.restore();
     }
-
     if (gameState === 'MENU') return;
 
     drawStaticFloor();
 
-    // Plateformes plafond
+    // Plateformes (plafond + milieu) — taille fixe PLAT_W × PLAT_H
     platforms.forEach(p => {
         if (p.isFloor) return;
         if (platImg.complete) ctx.drawImage(platImg, p.x, p.y, p.w, p.h);
     });
 
-    // Cristaux — rendu à taille naturelle, jamais étirés
+    // Cristaux — toujours à leur taille naturelle (CRYSTAL_W × CRYSTAL_H), jamais étirés
     hazards.forEach(h => {
         if (!picsImg.complete) return;
         const count = Math.ceil(h.w / CRYSTAL_W);
         for (let i = 0; i < count; i++) {
-            const dx = h.x + i*CRYSTAL_W;
+            const dx = h.x + i * CRYSTAL_W;
             ctx.save();
             if (h.side === 'top') {
+                // Cristal plafond : retourné verticalement
                 ctx.translate(dx + CRYSTAL_W/2, h.y + CRYSTAL_H/2);
                 ctx.scale(1, -1);
                 ctx.drawImage(picsImg, -CRYSTAL_W/2, -CRYSTAL_H/2, CRYSTAL_W, CRYSTAL_H);
             } else {
+                // Cristal sol : sens normal
                 ctx.drawImage(picsImg, dx, h.y, CRYSTAL_W, CRYSTAL_H);
             }
             ctx.restore();
         }
     });
 
-    // Drapeau
     if (flagImg.complete) ctx.drawImage(flagImg, goal.x, goal.y, goal.w, goal.h);
 
-    // Joueur
     if (walkFrames[0]?.complete) {
         ctx.save();
         ctx.translate(player.x + player.width/2, player.y + player.height/2);
@@ -292,7 +282,6 @@ function draw() {
         ctx.restore();
     }
 
-    // HUD
     ctx.fillStyle = "white"; ctx.font = "italic 22px 'Palatino Linotype', serif";
     ctx.textAlign = "center"; ctx.shadowBlur = 8; ctx.shadowColor = "black";
     ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width/2, canvas.height - 20);
@@ -311,7 +300,7 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// ─── MENU HTML ───────────────────────────────────────────────────────────────
+// ─── MENU ────────────────────────────────────────────────────────────────────
 document.body.insertAdjacentHTML('beforeend', `
 <div id="gameMenu" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   text-align:center;background:rgba(0,0,0,0.85);padding:50px;border-radius:20px;
