@@ -13,6 +13,7 @@ https://elgualicho.github.io/Gravity-Shifter/
 | `←` `→` | Se déplacer |
 | `Espace` | Inverser la gravité *(au sol seulement)* |
 | `Échap` | Menu principal |
+| `R` / `Entrée` | Recommencer après un game over |
 
 ---
 
@@ -46,12 +47,20 @@ c2 → milieu1 → c3.
 
 ---
 
+## Interface
+- Menu principal intégré en HTML/CSS avec direction artistique fantasy/arcane cohérente avec **Gravity Wizard**.
+- Écran de **game over** dédié, sans `alert`, affiché par-dessus le jeu avec options : recommencer le chapitre ou revenir au menu.
+- Raccourcis clavier après échec : `R` ou `Entrée` pour relancer, `Échap` pour revenir au menu.
+- Badge HUD indiquant le chapitre en cours.
+
+---
+
 ## Fichiers
 ```
 Gravity-Shifter/
-├── index.html
-├── game.js          # Physique, niveaux, rendu
-├── style.css
+├── index.html      # Canvas + overlays menu/game over
+├── game.js          # Physique, niveaux, rendu, logique UI
+├── style.css        # Direction artistique et interfaces HTML
 └── assets/
     ├── background.png          # Fond niveaux 1-3
     ├── background_winter.png   # Fond niveau 4 (hiver)
@@ -87,6 +96,7 @@ Gravity-Shifter/
 - [x] Animations joueur (4 frames)
 - [x] Assets différenciés par niveau (platform1/2, bg normal/hiver)
 - [x] Positions plateformes adaptatives (% de l'écran)
-- [ ] Écran de game over dédié (actuellement `alert`)
+- [x] Menu principal HTML/CSS cohérent avec la direction artistique
+- [x] Écran de game over dédié sans `alert`
 - [ ] Musique / effets sonores
 - [ ] Niveaux supplémentaires
