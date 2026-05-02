@@ -53,7 +53,8 @@ const walkFrames = [];
     walkFrames[index] = loadImage(`assets/${name}`);
 });
 
-// ─── CONSTANTES PHYSIQUE ─────────────────────────────────────────────────────
+// ─── CONSTANTES PHYSIQUE VALIDÉES ────────────────────────────────────────────
+// Ne pas modifier ces valeurs sans décision explicite : elles correspondent à la gravité validée au chapitre 4.
 const PLAYER_W = 75;
 const PLAYER_H = 95;
 const CRYSTAL_W = 65;
@@ -125,6 +126,10 @@ function makeFloor(W, floorY) {
     return { x: 0, y: floorY, w: W * 2, h: 120, isFloor: true };
 }
 
+function makePlatform(x, y, w = PLAT_W, h = PLAT_H) {
+    return { x, y, w, h };
+}
+
 function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
     const c1x = W * 0.09 | 0;
     const c2x = W * 0.34 | 0;
@@ -134,10 +139,10 @@ function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
 
     platforms = [
         makeFloor(W, floorY),
-        { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-        { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-        { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
-        { x: c3x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
+        makePlatform(c1x, CEIL_Y),
+        makePlatform(c2x, CEIL_Y),
+        makePlatform(m1x, m1y),
+        makePlatform(c3x, CEIL_Y)
     ];
 
     hazards = [
@@ -152,30 +157,32 @@ function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
 }
 
 function buildHardSummerLevel(W, H, floorY, CEIL_Y) {
-    const c1x = W * 0.07 | 0;
-    const m1x = W * 0.24 | 0;
-    const c2x = W * 0.39 | 0;
-    const m2x = W * 0.56 | 0;
+    const c1x = W * 0.08 | 0;
+    const m1x = W * 0.25 | 0;
+    const c2x = W * 0.41 | 0;
+    const m2x = W * 0.57 | 0;
     const c3x = W * 0.70 | 0;
 
     const m1y = H * 0.55 | 0;
     const m2y = H * 0.34 | 0;
 
+    // Niveau 6 : plateformes strictement à la taille validée PLAT_W x PLAT_H.
+    // La difficulté vient du placement, pas d'un élargissement des assets.
     platforms = [
         makeFloor(W, floorY),
-        { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-        { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
-        { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-        { x: m2x, y: m2y, w: PLAT_W, h: PLAT_H },
-        { x: c3x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
+        makePlatform(c1x, CEIL_Y),
+        makePlatform(m1x, m1y),
+        makePlatform(c2x, CEIL_Y),
+        makePlatform(m2x, m2y),
+        makePlatform(c3x, CEIL_Y)
     ];
 
     hazards = [
-        { x: c1x + 75, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: m1x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c2x + 60, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: m2x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c3x + 80, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c1x + 85, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m1x + 105, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m2x + 105, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c3x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: c2x + 245, y: CEIL_Y + PLAT_H, w: CRYSTAL_W, h: CRYSTAL_H, side: 'top' }
     ];
 
@@ -205,8 +212,8 @@ function loadLevel(lv) {
         const c1x = W * 0.08 | 0;
         const c2x = W * 0.48 | 0;
         platforms = [fp,
-            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
+            makePlatform(c1x, CEIL_Y),
+            makePlatform(c2x, CEIL_Y)
         ];
         hazards = [
             { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
@@ -220,9 +227,9 @@ function loadLevel(lv) {
         const m1y = H * 0.40 | 0;
         const c2x = W * 0.47 | 0;
         platforms = [fp,
-            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-            { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
-            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
+            makePlatform(c1x, CEIL_Y),
+            makePlatform(m1x, m1y),
+            makePlatform(c2x, CEIL_Y)
         ];
         hazards = [
             { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
@@ -240,10 +247,10 @@ function loadLevel(lv) {
         const m2x = W * 0.65 | 0;
         const m2y = H * 0.52 | 0;
         platforms = [fp,
-            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-            { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
-            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-            { x: m2x, y: m2y, w: PLAT_W, h: PLAT_H }
+            makePlatform(c1x, CEIL_Y),
+            makePlatform(m1x, m1y),
+            makePlatform(c2x, CEIL_Y),
+            makePlatform(m2x, m2y)
         ];
         hazards = [
             { x: c1x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
