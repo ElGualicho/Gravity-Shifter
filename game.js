@@ -44,6 +44,7 @@ const floorSteelImg = loadImage('assets/floor_steel.png');
 const platImg = loadImage('assets/platform1.png');
 const platImg2 = loadImage('assets/platform2.png');
 const platImg4 = loadImage('assets/platform4.png');
+const platImg7 = loadImage('assets/platform7.png');
 const flagImg = loadImage('assets/flag.png');
 const picsImg = loadImage('assets/pics.png');
 
@@ -71,7 +72,7 @@ const MAX_VX = 9;
 const ACCEL = 1.3;
 const FRIC = 0.78;
 const FLIP_OFFSET = 12;
-const MAX_LEVEL = 5;
+const MAX_LEVEL = 6;
 
 const player = {
     x: 100,
@@ -96,7 +97,8 @@ const levelThemes = {
     2: { background: bgSummerImg, floor: floorClayImg, platform: platImg, floorHeight: FLOOR_H },
     3: { background: backgroundImg, floor: floorStoneImg, platform: platImg, floorHeight: FLOOR_H },
     4: { background: bgWinterImg, floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
-    5: { background: bgSteelImg, floor: floorSteelImg, platform: platImg4, floorHeight: STEEL_FLOOR_H }
+    5: { background: bgSteelImg, floor: floorSteelImg, platform: platImg4, floorHeight: STEEL_FLOOR_H },
+    6: { background: bgSummerImg, floor: floorClayImg, platform: platImg7, floorHeight: FLOOR_H }
 };
 
 function getLevelTheme(level = currentLevel) {
@@ -119,6 +121,10 @@ function getFloorHeight(level = currentLevel) {
     return getLevelTheme(level).floorHeight;
 }
 
+function makeFloor(W, floorY) {
+    return { x: 0, y: floorY, w: W * 2, h: 120, isFloor: true };
+}
+
 function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
     const c1x = W * 0.09 | 0;
     const c2x = W * 0.34 | 0;
@@ -127,7 +133,7 @@ function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
     const m1y = H * 0.47 | 0;
 
     platforms = [
-        { x: 0, y: floorY, w: W * 2, h: 120, isFloor: true },
+        makeFloor(W, floorY),
         { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
         { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
         { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
@@ -142,6 +148,38 @@ function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
     ];
 
     goal.x = Math.min(c3x + PLAT_W + 90, W - goal.w - 70);
+    goal.y = floorY - 110;
+}
+
+function buildHardSummerLevel(W, H, floorY, CEIL_Y) {
+    const c1x = W * 0.07 | 0;
+    const m1x = W * 0.24 | 0;
+    const c2x = W * 0.39 | 0;
+    const m2x = W * 0.56 | 0;
+    const c3x = W * 0.70 | 0;
+
+    const m1y = H * 0.55 | 0;
+    const m2y = H * 0.34 | 0;
+
+    platforms = [
+        makeFloor(W, floorY),
+        { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+        { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
+        { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+        { x: m2x, y: m2y, w: PLAT_W, h: PLAT_H },
+        { x: c3x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
+    ];
+
+    hazards = [
+        { x: c1x + 75, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m1x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 60, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m2x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c3x + 80, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 245, y: CEIL_Y + PLAT_H, w: CRYSTAL_W, h: CRYSTAL_H, side: 'top' }
+    ];
+
+    goal.x = Math.min(c3x + PLAT_W + 70, W - goal.w - 60);
     goal.y = floorY - 110;
 }
 
@@ -160,7 +198,7 @@ function loadLevel(lv) {
     const floorH = getFloorHeight(lv);
     const floorY = H - floorH;
     const CEIL_Y = 40;
-    const fp = { x: 0, y: floorY, w: W * 2, h: 120, isFloor: true };
+    const fp = makeFloor(W, floorY);
     player.y = floorY - PLAYER_H - 2;
 
     if (lv === 1) {
@@ -217,6 +255,8 @@ function loadLevel(lv) {
         goal.y = floorY - 110;
     } else if (lv === 4 || lv === 5) {
         buildAdvancedLevel(W, H, floorY, CEIL_Y);
+    } else if (lv === 6) {
+        buildHardSummerLevel(W, H, floorY, CEIL_Y);
     }
 }
 
