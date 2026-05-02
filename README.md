@@ -16,6 +16,7 @@ https://elgualicho.github.io/Gravity-Shifter/
 | `Espace` | Inverser la gravité, uniquement au contact d'une surface |
 | `Échap` | Revenir au menu principal pendant une partie |
 | `R` / `Entrée` | Recommencer après un game over |
+| `Suppr` / `Backspace` | Supprimer l'élément sélectionné dans le mode développeur |
 
 ---
 
@@ -43,6 +44,7 @@ La gravité et les collisions sont actuellement validées. Les ajustements visue
 | 4 | Hiver | Sol hiver + 3 plafonds + 1 plateforme milieu | `background_winter.png`, `floor_winter.png`, `platform2.png` |
 | 5 | Métal / usine | Niveau type chapitre 4, mais entièrement métal | `background_steel.png`, `floor_steel.png`, `platform4.png` |
 | 6 | Été difficile / argile | Nouveau tracé plus exigeant avec 5 plateformes | `background_summer.png`, `floor_clay.png`, `platform7.png` |
+| 7+ | Custom | Niveaux créés dans le mode développeur | Selon le thème choisi |
 
 ### Chemin des niveaux avancés 4 et 5
 
@@ -58,22 +60,127 @@ Le chapitre 6 utilise le thème été / argile avec `background_summer.png`, `fl
 
 ---
 
-## Thèmes d'assets dans `game.js`
+## Mode développeur
 
-Le jeu utilise une table `levelThemes` pour associer chaque niveau à son background, son sol, sa plateforme et sa hauteur de sol.
+Un **mode développeur MVP** est disponible directement depuis le menu principal avec le bouton :
+
+```txt
+🛠️ Mode développeur
+```
+
+Il permet de créer visuellement des niveaux depuis le canvas, sans modifier le code manuellement.
+
+### Fonctionnalités disponibles
+
+- Choix du thème du niveau :
+  - Nature / herbe ;
+  - Été / argile ;
+  - Pierre ;
+  - Hiver ;
+  - Métal.
+- Placement visuel dans le canvas :
+  - plateformes ;
+  - pics au sol ;
+  - pics au plafond ;
+  - drapeau.
+- Déplacement des éléments à la souris.
+- Suppression de l'élément sélectionné avec `Suppr` ou `Backspace`.
+- Bouton `Tester` pour lancer immédiatement le niveau en cours de création.
+- Bouton `Enregistrer` pour ajouter le niveau après les six niveaux intégrés.
+- Bouton `Exporter JSON` pour récupérer la structure du niveau.
+- Bouton `Vider` pour repartir d'un niveau vierge.
+
+### Sauvegarde locale
+
+Les niveaux créés dans le mode développeur sont stockés dans le navigateur via `localStorage` avec la clé :
 
 ```js
+const CUSTOM_LEVEL_STORAGE_KEY = 'gravityWizardCustomLevels';
+```
+
+Les niveaux sauvegardés apparaissent ensuite dans le menu principal sous forme de chapitres custom :
+
+```txt
+🧪 Chapitre 7 custom
+🧪 Chapitre 8 custom
+...
+```
+
+### Export JSON
+
+Le bouton `Exporter JSON` génère une version portable du niveau. Cette exportation sert à intégrer plus tard un niveau custom de façon permanente dans le repo.
+
+Exemple de structure exportée :
+
+```json
+{
+  "name": "Niveau custom",
+  "theme": "grass",
+  "platforms": [
+    {
+      "xRatio": 0.25,
+      "yRatio": 0.42,
+      "w": 320,
+      "h": 60
+    }
+  ],
+  "hazards": [
+    {
+      "xRatio": 0.45,
+      "yRatio": 0.82,
+      "w": 130,
+      "h": 70,
+      "side": "bottom"
+    }
+  ],
+  "goal": {
+    "xRatio": 0.82,
+    "yRatio": 0.78,
+    "w": 100,
+    "h": 110
+  }
+}
+```
+
+### Limite volontaire
+
+Le site étant hébergé sur GitHub Pages, le mode développeur **n'écrit pas directement dans le dépôt GitHub**. Écrire automatiquement dans le repo nécessiterait un backend ou un token GitHub exposé côté client, ce qui n'est pas souhaitable.
+
+Le workflow recommandé est donc :
+
+```txt
+Créer visuellement → Tester → Enregistrer localement → Exporter JSON → Intégrer au repo si le niveau est validé
+```
+
+---
+
+## Thèmes d'assets dans `game.js`
+
+Le jeu utilise deux niveaux de mapping :
+
+1. `themePresets`, qui décrit les biomes disponibles ;
+2. `levelThemes`, qui associe les niveaux intégrés à un thème précis.
+
+```js
+const themePresets = {
+    grass: { background: backgroundImg, floor: floorGrassImg, platform: platImg, floorHeight: FLOOR_H },
+    clay: { background: bgSummerImg, floor: floorClayImg, platform: platImg7, floorHeight: FLOOR_H },
+    stone: { background: backgroundImg, floor: floorStoneImg, platform: platImg, floorHeight: FLOOR_H },
+    winter: { background: bgWinterImg, floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
+    steel: { background: bgSteelImg, floor: floorSteelImg, platform: platImg4, floorHeight: STEEL_FLOOR_H }
+};
+
 const levelThemes = {
-    1: { background: backgroundImg, floor: floorGrassImg, platform: platImg, floorHeight: FLOOR_H },
-    2: { background: bgSummerImg, floor: floorClayImg, platform: platImg, floorHeight: FLOOR_H },
-    3: { background: backgroundImg, floor: floorStoneImg, platform: platImg, floorHeight: FLOOR_H },
-    4: { background: bgWinterImg, floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
-    5: { background: bgSteelImg, floor: floorSteelImg, platform: platImg4, floorHeight: STEEL_FLOOR_H },
-    6: { background: bgSummerImg, floor: floorClayImg, platform: platImg7, floorHeight: FLOOR_H }
+    1: { ...themePresets.grass, platform: platImg },
+    2: { ...themePresets.clay, platform: platImg },
+    3: { ...themePresets.stone, platform: platImg },
+    4: themePresets.winter,
+    5: themePresets.steel,
+    6: themePresets.clay
 };
 ```
 
-Cette logique évite de coder les assets avec des conditions isolées du type `currentLevel === 4`.
+Cette logique permet aussi au mode développeur de créer des niveaux custom avec les mêmes thèmes que le jeu principal.
 
 ---
 
@@ -96,6 +203,8 @@ Le menu principal garde une ambiance sombre, dorée et magique. Les niveaux ont 
 
 - Menu principal intégré en HTML/CSS.
 - Accès direct aux chapitres 1 à 6 depuis le menu.
+- Accès direct aux chapitres custom enregistrés localement.
+- Mode développeur intégré sous forme de panneau latéral.
 - Écran de game over dédié, sans `alert` navigateur.
 - Boutons : recommencer le chapitre ou revenir au menu.
 - Raccourcis clavier après échec : `R`, `Entrée`, `Échap`.
@@ -112,6 +221,7 @@ Gravity-Shifter/
 ├── index.html
 ├── game.js
 ├── visual-adjustments.js
+├── dev-editor.js
 ├── style.css
 └── assets/
     ├── background.png
@@ -139,10 +249,11 @@ Gravity-Shifter/
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | Structure HTML, canvas, menu principal, écran game over, chargement des scripts |
-| `style.css` | Direction artistique de l'interface HTML : menu, boutons, overlays |
-| `game.js` | Moteur principal : physique, gravité, niveaux, collisions, thèmes d'assets |
+| `index.html` | Structure HTML, canvas, menu principal, écran game over, panneau développeur, chargement des scripts |
+| `style.css` | Direction artistique de l'interface HTML : menu, boutons, overlays, panneau développeur |
+| `game.js` | Moteur principal : physique, gravité, niveaux intégrés, niveaux custom, collisions, thèmes d'assets |
 | `visual-adjustments.js` | Ajustements visuels fins sans modifier les collisions ni la gravité |
+| `dev-editor.js` | Éditeur visuel de niveaux, sauvegarde locale et export JSON |
 
 ---
 
@@ -162,7 +273,7 @@ Gravity-Shifter/
 | `platform1.png` | Plateformes des niveaux nature / base |
 | `platform2.png` | Plateformes acier/glace du niveau 4 |
 | `platform4.png` | Plateformes métal du niveau 5 |
-| `platform7.png` | Plateformes été / argile du niveau 6 |
+| `platform7.png` | Plateformes été / argile du niveau 6 et du thème `clay` |
 | `pics.png` | Cristaux / pièges |
 | `flag.png` | Objectif de fin de niveau |
 | `walk1.png` à `walk4.png` | Animation de marche du joueur |
@@ -173,7 +284,8 @@ Gravity-Shifter/
 
 | Constante | Valeur actuelle | Rôle |
 |---|---:|---|
-| `MAX_LEVEL` | `6` | Nombre total de niveaux jouables |
+| `BUILTIN_LEVEL_COUNT` | `6` | Nombre total de niveaux intégrés |
+| `CUSTOM_LEVEL_STORAGE_KEY` | `gravityWizardCustomLevels` | Clé `localStorage` des niveaux custom |
 | `GRAVITY` | `0.8` | Accélération gravitationnelle |
 | `MAX_VY` | `13` | Vitesse verticale maximale |
 | `MAX_VX` | `9` | Vitesse horizontale maximale |
@@ -203,14 +315,19 @@ Ces constantes décalent uniquement le rendu des sprites à l'écran. Elles ne c
 | `PLAYER_VISUAL_Y_OFFSET` | `10` | Décale visuellement `walk1.png` à `walk4.png` de 10 px vers le bas |
 | `PICS_VISUAL_Y_OFFSET` | `9` | Décale visuellement `pics.png` de 9 px vers le bas |
 | `FLAG_VISUAL_Y_OFFSET` | `15` | Décale visuellement `flag.png` de 15 px vers le bas |
+| `INVERTED_PLAYER_ATTACH_OFFSET` | `26` | Rapproche visuellement le joueur de 26 px vers les plateformes hautes en gravité inversée |
+| `INVERTED_PICS_ATTACH_OFFSET` | `22` | Rapproche visuellement les pics de 22 px vers les plateformes hautes |
 
-Ces valeurs ont été réglées pour que les assets soient mieux posés visuellement par rapport aux sols dédiés, sans casser la gravité.
+Ces valeurs ont été réglées pour que les assets soient mieux posés visuellement par rapport aux sols et plateformes, sans casser la gravité.
 
 ---
 
 ## État actuel du projet
 
-- [x] 6 niveaux jouables
+- [x] 6 niveaux intégrés jouables
+- [x] Chapitres custom sauvegardés localement
+- [x] Mode développeur visuel MVP
+- [x] Export JSON des niveaux custom
 - [x] Chapitre 5 métal / usine avec `platform4.png`
 - [x] Chapitre 6 été / argile avec `platform7.png`
 - [x] Physique antigravité complète
@@ -228,8 +345,8 @@ Ces valeurs ont été réglées pour que les assets soient mieux posés visuelle
 - [x] Suppression du texte bas d'écran pendant le gameplay
 - [ ] Écran de victoire dédié
 - [ ] Musique et effets sonores
-- [ ] Niveaux supplémentaires
-- [ ] Éventuel système de sélection/progression de niveaux
+- [ ] Intégration permanente des niveaux exportés depuis le mode développeur
+- [ ] Système de sélection/progression de niveaux plus complet
 
 ---
 
@@ -237,6 +354,7 @@ Ces valeurs ont été réglées pour que les assets soient mieux posés visuelle
 
 - Ne pas modifier la gravité sans nécessité : le comportement actuel est validé.
 - Les ajustements de placement visuel doivent se faire dans `visual-adjustments.js`.
-- Les sols dédiés doivent rester dans `assets/` et être associés via `levelThemes`.
-- Les plateformes flottantes doivent être déclarées via `levelThemes`.
-- Si un nouveau biome est ajouté, créer un couple `background_*` + `floor_*`, puis l'ajouter dans `levelThemes`.
+- Les sols dédiés doivent rester dans `assets/` et être associés via `themePresets` / `levelThemes`.
+- Les plateformes flottantes doivent être déclarées via `levelThemes` ou via les niveaux custom.
+- Les niveaux créés dans le mode développeur sont locaux au navigateur tant qu'ils ne sont pas intégrés au repo.
+- Si un nouveau biome est ajouté, créer un couple `background_*` + `floor_*`, puis l'ajouter dans `themePresets`.
