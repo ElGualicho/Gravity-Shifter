@@ -6,8 +6,8 @@ const PICS_VISUAL_Y_OFFSET = 9;
 const FLAG_VISUAL_Y_OFFSET = 15;
 
 // En gravité inversée, les sprites doivent visuellement coller à la plateforme du dessus.
-const INVERTED_PLAYER_ATTACH_OFFSET = 21;
-const INVERTED_PICS_ATTACH_OFFSET = 19;
+const INVERTED_PLAYER_ATTACH_OFFSET = 26;
+const INVERTED_PICS_ATTACH_OFFSET = 22;
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
