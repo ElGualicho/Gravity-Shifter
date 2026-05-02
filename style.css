@@ -93,7 +93,11 @@ canvas {
     position: relative;
     width: min(620px, 92vw);
     max-height: 92vh;
-    overflow-y: auto;
+    /* overflow-y: scroll pour que la scrollbar ne surgisse pas au hover,
+       combiné à scrollbar-width: none pour la masquer visuellement.
+       Le contenu reste scrollable si nécessaire. */
+    overflow-y: scroll;
+    scrollbar-width: none;
     padding: 44px;
     text-align: center;
     border: 1px solid rgba(245, 201, 107, 0.54);
@@ -106,6 +110,12 @@ canvas {
         0 0 40px rgba(245, 201, 107, 0.16),
         inset 0 0 50px rgba(142, 232, 255, 0.05);
     backdrop-filter: blur(14px);
+}
+
+/* Masquer la scrollbar webkit sur .arcane-card */
+.arcane-card::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
 }
 
 .arcane-card::before,
