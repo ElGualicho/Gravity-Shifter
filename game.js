@@ -73,7 +73,10 @@ const MAX_VX = 9;
 const ACCEL = 1.3;
 const FRIC = 0.78;
 const FLIP_OFFSET = 12;
-const MAX_LEVEL = 6;
+
+const BUILTIN_LEVEL_COUNT = 6;
+const CUSTOM_LEVEL_STORAGE_KEY = 'gravityWizardCustomLevels';
+let customLevels = [];
 
 const player = {
     x: 100,
@@ -93,16 +96,50 @@ let platforms = [];
 let hazards = [];
 let goal = { x: 0, y: 0, w: 100, h: 110 };
 
-const levelThemes = {
-    1: { background: backgroundImg, floor: floorGrassImg, platform: platImg, floorHeight: FLOOR_H },
-    2: { background: bgSummerImg, floor: floorClayImg, platform: platImg, floorHeight: FLOOR_H },
-    3: { background: backgroundImg, floor: floorStoneImg, platform: platImg, floorHeight: FLOOR_H },
-    4: { background: bgWinterImg, floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
-    5: { background: bgSteelImg, floor: floorSteelImg, platform: platImg4, floorHeight: STEEL_FLOOR_H },
-    6: { background: bgSummerImg, floor: floorClayImg, platform: platImg7, floorHeight: FLOOR_H }
+const themePresets = {
+    grass: { background: backgroundImg, floor: floorGrassImg, platform: platImg, floorHeight: FLOOR_H },
+    clay: { background: bgSummerImg, floor: floorClayImg, platform: platImg7, floorHeight: FLOOR_H },
+    stone: { background: backgroundImg, floor: floorStoneImg, platform: platImg, floorHeight: FLOOR_H },
+    winter: { background: bgWinterImg, floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
+    steel: { background: bgSteelImg, floor: floorSteelImg, platform: platImg4, floorHeight: STEEL_FLOOR_H }
 };
 
+const levelThemes = {
+    1: { ...themePresets.grass, platform: platImg },
+    2: { ...themePresets.clay, platform: platImg },
+    3: { ...themePresets.stone, platform: platImg },
+    4: themePresets.winter,
+    5: themePresets.steel,
+    6: themePresets.clay
+};
+
+function loadCustomLevels() {
+    try {
+        const stored = localStorage.getItem(CUSTOM_LEVEL_STORAGE_KEY);
+        customLevels = stored ? JSON.parse(stored) : [];
+        if (!Array.isArray(customLevels)) customLevels = [];
+    } catch (err) {
+        console.warn('Impossible de charger les niveaux custom', err);
+        customLevels = [];
+    }
+}
+
+function saveCustomLevels() {
+    localStorage.setItem(CUSTOM_LEVEL_STORAGE_KEY, JSON.stringify(customLevels));
+}
+
+function getTotalLevelCount() {
+    return BUILTIN_LEVEL_COUNT + customLevels.length;
+}
+
+function getCustomLevel(level = currentLevel) {
+    if (level <= BUILTIN_LEVEL_COUNT) return null;
+    return customLevels[level - BUILTIN_LEVEL_COUNT - 1] || null;
+}
+
 function getLevelTheme(level = currentLevel) {
+    const custom = getCustomLevel(level);
+    if (custom) return themePresets[custom.theme] || themePresets.grass;
     return levelThemes[level] || levelThemes[1];
 }
 
@@ -166,8 +203,6 @@ function buildHardSummerLevel(W, H, floorY, CEIL_Y) {
     const m1y = H * 0.55 | 0;
     const m2y = H * 0.34 | 0;
 
-    // Niveau 6 : plateformes strictement à la taille validée PLAT_W x PLAT_H.
-    // La difficulté vient du placement, pas d'un élargissement des assets.
     platforms = [
         makeFloor(W, floorY),
         makePlatform(c1x, CEIL_Y),
@@ -190,6 +225,34 @@ function buildHardSummerLevel(W, H, floorY, CEIL_Y) {
     goal.y = floorY - 110;
 }
 
+function denormalizeRect(rect, W, H, floorY) {
+    return {
+        x: Math.round((rect.xRatio ?? 0) * W),
+        y: Math.round((rect.yRatio ?? 0) * H),
+        w: rect.w || PLAT_W,
+        h: rect.h || PLAT_H,
+        side: rect.side
+    };
+}
+
+function buildCustomLevel(levelData, W, H, floorY) {
+    platforms = [makeFloor(W, floorY)];
+
+    (levelData.platforms || []).forEach(p => {
+        const r = denormalizeRect(p, W, H, floorY);
+        platforms.push(makePlatform(r.x, r.y, r.w, r.h));
+    });
+
+    hazards = (levelData.hazards || []).map(h => {
+        const r = denormalizeRect(h, W, H, floorY);
+        return { x: r.x, y: r.y, w: r.w, h: r.h, side: h.side || 'bottom' };
+    });
+
+    const savedGoal = levelData.goal || { xRatio: 0.82, yRatio: 0.78, w: 100, h: 110 };
+    const g = denormalizeRect(savedGoal, W, H, floorY);
+    goal = { x: g.x, y: g.y, w: savedGoal.w || 100, h: savedGoal.h || 110 };
+}
+
 function loadLevel(lv) {
     keys = {};
     player.velX = 0;
@@ -207,6 +270,12 @@ function loadLevel(lv) {
     const CEIL_Y = 40;
     const fp = makeFloor(W, floorY);
     player.y = floorY - PLAYER_H - 2;
+
+    const custom = getCustomLevel(lv);
+    if (custom) {
+        buildCustomLevel(custom, W, H, floorY);
+        return;
+    }
 
     if (lv === 1) {
         const c1x = W * 0.08 | 0;
@@ -305,6 +374,7 @@ function showMenu() {
     gameState = 'MENU';
     keys = {};
     setOverlayVisibility(true, false);
+    if (typeof syncCustomLevelButtons === 'function') syncCustomLevelButtons();
 }
 
 function startGame(lv) {
@@ -428,7 +498,7 @@ function update() {
 
     if (player.x < goal.x + goal.w && player.x + player.width > goal.x &&
         player.y < goal.y + goal.h && player.y + player.height > goal.y) {
-        if (currentLevel < MAX_LEVEL) {
+        if (currentLevel < getTotalLevelCount()) {
             loadLevel(currentLevel + 1);
         } else {
             showMenu();
@@ -515,5 +585,6 @@ window.addEventListener('keyup', e => {
     keys[e.code] = false;
 });
 
+loadCustomLevels();
 showMenu();
 update();
