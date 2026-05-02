@@ -1,8 +1,9 @@
 // Ajustements visuels fins : sprites légèrement descendus et suppression du texte bas d'écran.
 // Les collisions restent inchangées.
 
-const SPRITE_VISUAL_Y_OFFSET = 7;
-const FLAG_VISUAL_Y_OFFSET = 10;
+const PLAYER_VISUAL_Y_OFFSET = 10;
+const PICS_VISUAL_Y_OFFSET = 9;
+const FLAG_VISUAL_Y_OFFSET = 15;
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -36,7 +37,7 @@ function draw() {
         const count = Math.ceil(h.w / CRYSTAL_W);
         for (let i = 0; i < count; i++) {
             const dx = h.x + i * CRYSTAL_W;
-            const dy = h.y + SPRITE_VISUAL_Y_OFFSET;
+            const dy = h.y + PICS_VISUAL_Y_OFFSET;
             ctx.save();
             if (h.side === 'top') {
                 ctx.translate(dx + CRYSTAL_W / 2, dy + CRYSTAL_H / 2);
@@ -54,7 +55,7 @@ function draw() {
     const playerFrame = getCurrentWalkFrame();
     if (playerFrame?.complete) {
         ctx.save();
-        ctx.translate(player.x + player.width / 2, player.y + player.height / 2 + SPRITE_VISUAL_Y_OFFSET);
+        ctx.translate(player.x + player.width / 2, player.y + player.height / 2 + PLAYER_VISUAL_Y_OFFSET);
         ctx.scale(player.facingRight ? 1 : -1, gravityDirection === -1 ? -1 : 1);
         ctx.drawImage(playerFrame, -player.width / 2, -player.height / 2, player.width, player.height);
         ctx.restore();
