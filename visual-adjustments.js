@@ -1,7 +1,8 @@
 // Ajustements visuels fins : sprites légèrement descendus et suppression du texte bas d'écran.
 // Les collisions restent inchangées.
 
-const SPRITE_VISUAL_Y_OFFSET = 5;
+const SPRITE_VISUAL_Y_OFFSET = 2;
+const FLAG_VISUAL_Y_OFFSET = 5;
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -48,7 +49,7 @@ function draw() {
         }
     });
 
-    if (flagImg.complete) ctx.drawImage(flagImg, goal.x, goal.y, goal.w, goal.h);
+    if (flagImg.complete) ctx.drawImage(flagImg, goal.x, goal.y + FLAG_VISUAL_Y_OFFSET, goal.w, goal.h);
 
     const playerFrame = getCurrentWalkFrame();
     if (playerFrame?.complete) {
