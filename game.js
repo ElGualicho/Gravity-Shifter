@@ -22,20 +22,33 @@ resizeCanvas();
 
 // ─── ASSETS ──────────────────────────────────────────────────────────────────
 let imagesLoaded = 0;
-const backgroundImg = new Image(); backgroundImg.src = 'assets/background.png'; backgroundImg.onload = () => imagesLoaded++;
-const bgWinterImg = new Image(); bgWinterImg.src = 'assets/background_winter.png'; bgWinterImg.onload = () => imagesLoaded++;
-const floorWinterImg = new Image(); floorWinterImg.src = 'assets/floor_winter.png'; floorWinterImg.onload = () => imagesLoaded++;
-const platImg = new Image(); platImg.src = 'assets/platform1.png'; platImg.onload = () => imagesLoaded++;
-const platImg2 = new Image(); platImg2.src = 'assets/platform2.png'; platImg2.onload = () => imagesLoaded++;
-const flagImg = new Image(); flagImg.src = 'assets/flag.png'; flagImg.onload = () => imagesLoaded++;
-const picsImg = new Image(); picsImg.src = 'assets/pics.png'; picsImg.onload = () => imagesLoaded++;
+
+function loadImage(src) {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => imagesLoaded++;
+    return img;
+}
+
+const backgroundImg = loadImage('assets/background.png');
+const bgSummerImg = loadImage('assets/background_summer.png');
+const bgWinterImg = loadImage('assets/background_winter.png');
+const bgSteelImg = loadImage('assets/background_steel.png');
+
+const floorGrassImg = loadImage('assets/floor_grass.png');
+const floorClayImg = loadImage('assets/floor_clay.png');
+const floorStoneImg = loadImage('assets/floor_stone.png');
+const floorWinterImg = loadImage('assets/floor_winter.png');
+const floorSteelImg = loadImage('assets/floor_steel.png');
+
+const platImg = loadImage('assets/platform1.png');
+const platImg2 = loadImage('assets/platform2.png');
+const flagImg = loadImage('assets/flag.png');
+const picsImg = loadImage('assets/pics.png');
 
 const walkFrames = [];
 ['walk1.png', 'walk2.png', 'walk3.png', 'walk4.png'].forEach((name, index) => {
-    const img = new Image();
-    img.src = `assets/${name}`;
-    img.onload = () => imagesLoaded++;
-    walkFrames[index] = img;
+    walkFrames[index] = loadImage(`assets/${name}`);
 });
 
 // ─── CONSTANTES PHYSIQUE ─────────────────────────────────────────────────────
@@ -46,7 +59,8 @@ const CRYSTAL_H = 70;
 const PLAT_W = 320;
 const PLAT_H = 60;
 const FLOOR_H = 65;
-const WINTER_FLOOR_H = 85; // floor_winter.png = 1672 x 85 px
+const WINTER_FLOOR_H = 85;
+const STEEL_FLOOR_H = 65;
 const HBOX_MX = 20;
 const HBOX_MY = 18;
 
@@ -56,6 +70,7 @@ const MAX_VX = 9;
 const ACCEL = 1.3;
 const FRIC = 0.78;
 const FLIP_OFFSET = 12;
+const MAX_LEVEL = 5;
 
 const player = {
     x: 100,
@@ -75,8 +90,58 @@ let platforms = [];
 let hazards = [];
 let goal = { x: 0, y: 0, w: 100, h: 110 };
 
+const levelThemes = {
+    1: { background: backgroundImg, floor: floorGrassImg, platform: platImg, floorHeight: FLOOR_H },
+    2: { background: bgSummerImg, floor: floorClayImg, platform: platImg, floorHeight: FLOOR_H },
+    3: { background: backgroundImg, floor: floorStoneImg, platform: platImg, floorHeight: FLOOR_H },
+    4: { background: bgWinterImg, floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
+    5: { background: bgSteelImg, floor: floorSteelImg, platform: platImg2, floorHeight: STEEL_FLOOR_H }
+};
+
+function getLevelTheme(level = currentLevel) {
+    return levelThemes[level] || levelThemes[1];
+}
+
+function getCurrentBackgroundImage(level = currentLevel) {
+    return getLevelTheme(level).background;
+}
+
+function getCurrentPlatformImage(level = currentLevel) {
+    return getLevelTheme(level).platform;
+}
+
+function getCurrentFloorImage(level = currentLevel) {
+    return getLevelTheme(level).floor;
+}
+
 function getFloorHeight(level = currentLevel) {
-    return level === 4 ? WINTER_FLOOR_H : FLOOR_H;
+    return getLevelTheme(level).floorHeight;
+}
+
+function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
+    const c1x = W * 0.09 | 0;
+    const c2x = W * 0.34 | 0;
+    const m1x = W * 0.49 | 0;
+    const c3x = W * 0.62 | 0;
+    const m1y = H * 0.47 | 0;
+
+    platforms = [
+        { x: 0, y: floorY, w: W * 2, h: 120, isFloor: true },
+        { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+        { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
+        { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
+        { x: c3x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
+    ];
+
+    hazards = [
+        { x: c1x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m1x + 70, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c3x + 100, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
+    ];
+
+    goal.x = Math.min(c3x + PLAT_W + 90, W - goal.w - 70);
+    goal.y = floorY - 110;
 }
 
 function loadLevel(lv) {
@@ -149,27 +214,8 @@ function loadLevel(lv) {
         ];
         goal.x = m2x + PLAT_W + 20;
         goal.y = floorY - 110;
-    } else {
-        const c1x = W * 0.09 | 0;
-        const c2x = W * 0.34 | 0;
-        const m1x = W * 0.49 | 0;
-        const c3x = W * 0.62 | 0;
-        const m1y = H * 0.47 | 0;
-
-        platforms = [fp,
-            { x: c1x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-            { x: c2x, y: CEIL_Y, w: PLAT_W, h: PLAT_H },
-            { x: m1x, y: m1y, w: PLAT_W, h: PLAT_H },
-            { x: c3x, y: CEIL_Y, w: PLAT_W, h: PLAT_H }
-        ];
-        hazards = [
-            { x: c1x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: c2x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: m1x + 70, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: c3x + 100, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
-        ];
-        goal.x = Math.min(c3x + PLAT_W + 90, W - goal.w - 70);
-        goal.y = floorY - 110;
+    } else if (lv === 4 || lv === 5) {
+        buildAdvancedLevel(W, H, floorY, CEIL_Y);
     }
 }
 
@@ -334,7 +380,7 @@ function update() {
 
     if (player.x < goal.x + goal.w && player.x + player.width > goal.x &&
         player.y < goal.y + goal.h && player.y + player.height > goal.y) {
-        if (currentLevel < 4) {
+        if (currentLevel < MAX_LEVEL) {
             loadLevel(currentLevel + 1);
         } else {
             showMenu();
@@ -348,9 +394,9 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const bgImg = currentLevel === 4 ? bgWinterImg : backgroundImg;
-    const curPlatImg = currentLevel === 4 ? platImg2 : platImg;
-    const curFloorImg = currentLevel === 4 ? floorWinterImg : curPlatImg;
+    const bgImg = getCurrentBackgroundImage();
+    const curPlatImg = getCurrentPlatformImage();
+    const curFloorImg = getCurrentFloorImage();
 
     if (bgImg.complete) {
         ctx.save();
@@ -399,15 +445,6 @@ function draw() {
         ctx.drawImage(playerFrame, -player.width / 2, -player.height / 2, player.width, player.height);
         ctx.restore();
     }
-
-    const floorTop = canvas.height - getFloorHeight();
-    ctx.fillStyle = "white";
-    ctx.font = "italic 22px 'Palatino Linotype', serif";
-    ctx.textAlign = "center";
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = "black";
-    ctx.fillText(`Chapitre ${currentLevel}  •  Espace pour défier les lois`, canvas.width / 2, floorTop - 14);
-    ctx.shadowBlur = 0;
 }
 
 window.addEventListener('keydown', e => {
