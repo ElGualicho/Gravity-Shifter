@@ -161,9 +161,6 @@ function saveDevLevel() {
 }
 
 function testDevLevel() {
-    // Synchronise le thème depuis le select, puis passe le snapshot complet
-    // à startDevTest() dans game.js — aucune modification de customLevels,
-    // donc getCustomLevel() restera stable à chaque frame de rendu.
     devLevel.theme = devThemeSelect.value;
     const snapshot = JSON.parse(JSON.stringify(devLevel));
     devPanel.classList.remove('is-visible');
@@ -203,7 +200,8 @@ function drawDevEditorOverlay() {
 
     if (bgImg.complete) {
         ctx.save();
-        ctx.filter = 'blur(2px) brightness(0.7)';
+        // Même filtre qu'en mode PLAYING dans game.js
+        ctx.filter = 'blur(4px) brightness(0.65)';
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
         ctx.restore();
     }
