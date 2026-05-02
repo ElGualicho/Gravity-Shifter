@@ -43,6 +43,7 @@ const floorSteelImg = loadImage('assets/floor_steel.png');
 
 const platImg = loadImage('assets/platform1.png');
 const platImg2 = loadImage('assets/platform2.png');
+const platImg4 = loadImage('assets/platform4.png');
 const flagImg = loadImage('assets/flag.png');
 const picsImg = loadImage('assets/pics.png');
 
@@ -95,7 +96,7 @@ const levelThemes = {
     2: { background: bgSummerImg, floor: floorClayImg, platform: platImg, floorHeight: FLOOR_H },
     3: { background: backgroundImg, floor: floorStoneImg, platform: platImg, floorHeight: FLOOR_H },
     4: { background: bgWinterImg, floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
-    5: { background: bgSteelImg, floor: floorSteelImg, platform: platImg2, floorHeight: STEEL_FLOOR_H }
+    5: { background: bgSteelImg, floor: floorSteelImg, platform: platImg4, floorHeight: STEEL_FLOOR_H }
 };
 
 function getLevelTheme(level = currentLevel) {
