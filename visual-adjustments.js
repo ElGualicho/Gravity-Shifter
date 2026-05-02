@@ -8,9 +8,9 @@ const FLAG_VISUAL_Y_OFFSET = 15;
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const bgImg = currentLevel === 4 ? bgWinterImg : backgroundImg;
-    const curPlatImg = currentLevel === 4 ? platImg2 : platImg;
-    const curFloorImg = currentLevel === 4 ? floorWinterImg : curPlatImg;
+    const bgImg = getCurrentBackgroundImage();
+    const curPlatImg = getCurrentPlatformImage();
+    const curFloorImg = getCurrentFloorImage();
 
     if (bgImg.complete) {
         ctx.save();
