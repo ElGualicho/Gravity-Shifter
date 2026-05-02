@@ -24,6 +24,7 @@ function openDevEditor() {
     keys = {};
     setOverlayVisibility(false, false);
     devPanel.classList.add('is-visible');
+    // Synchronise le thème depuis le select au moment de l'ouverture
     devLevel.theme = devThemeSelect.value;
     normalizeDevDefaultGoal();
 }
@@ -161,19 +162,22 @@ function saveDevLevel() {
 }
 
 function testDevLevel() {
+    // S'assure que le thème reflète exactement la valeur courante du select
+    devLevel.theme = devThemeSelect.value;
+
     const temp = JSON.parse(JSON.stringify(devLevel));
     customLevels.push(temp);
     const levelNumber = BUILTIN_LEVEL_COUNT + customLevels.length;
-    startGame(levelNumber);
-    customLevels.pop();
     devPanel.classList.remove('is-visible');
     devMode = false;
+    startGame(levelNumber);
+    customLevels.pop();
 }
 
 function exportDevLevel() {
     devExport.value = JSON.stringify(devLevel, null, 2);
     devExport.select();
-    devStatus.textContent = 'JSON exporté. Copie-le pour l’intégrer plus tard au repo.';
+    devStatus.textContent = 'JSON exporté. Copie-le pour l\'intégrer plus tard au repo.';
 }
 
 function syncCustomLevelButtons() {
