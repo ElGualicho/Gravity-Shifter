@@ -6,7 +6,8 @@ const PICS_VISUAL_Y_OFFSET = 9;
 const FLAG_VISUAL_Y_OFFSET = 15;
 
 // En gravité inversée, les sprites doivent visuellement coller à la plateforme du dessus.
-const INVERTED_GRAVITY_ATTACH_OFFSET = 15;
+const INVERTED_PLAYER_ATTACH_OFFSET = 18;
+const INVERTED_PICS_ATTACH_OFFSET = 17;
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -40,7 +41,7 @@ function draw() {
         const count = Math.ceil(h.w / CRYSTAL_W);
         for (let i = 0; i < count; i++) {
             const dx = h.x + i * CRYSTAL_W;
-            const attachOffset = h.side === 'top' ? INVERTED_GRAVITY_ATTACH_OFFSET : 0;
+            const attachOffset = h.side === 'top' ? INVERTED_PICS_ATTACH_OFFSET : 0;
             const dy = h.y + PICS_VISUAL_Y_OFFSET - attachOffset;
             ctx.save();
             if (h.side === 'top') {
@@ -58,7 +59,7 @@ function draw() {
 
     const playerFrame = getCurrentWalkFrame();
     if (playerFrame?.complete) {
-        const attachOffset = gravityDirection === -1 ? INVERTED_GRAVITY_ATTACH_OFFSET : 0;
+        const attachOffset = gravityDirection === -1 ? INVERTED_PLAYER_ATTACH_OFFSET : 0;
         ctx.save();
         ctx.translate(player.x + player.width / 2, player.y + player.height / 2 + PLAYER_VISUAL_Y_OFFSET - attachOffset);
         ctx.scale(player.facingRight ? 1 : -1, gravityDirection === -1 ? -1 : 1);
