@@ -1,8 +1,8 @@
 // Ajustements visuels fins : sprites légèrement descendus et suppression du texte bas d'écran.
 // Les collisions restent inchangées.
 
-const SPRITE_VISUAL_Y_OFFSET = 2;
-const FLAG_VISUAL_Y_OFFSET = 5;
+const SPRITE_VISUAL_Y_OFFSET = 4;
+const FLAG_VISUAL_Y_OFFSET = 7;
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
