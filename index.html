@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Gravity Wizard</title>
-    <link rel="stylesheet" href="style.css?v=20260501-17">
+    <link rel="stylesheet" href="style.css?v=20260501-18">
 </head>
 <body>
     <div id="game-container">
@@ -32,7 +32,10 @@
                     <button onclick="startGame(4)">❄️ Chapitre 4</button>
                     <button onclick="startGame(5)">⚙️ Chapitre 5</button>
                     <button onclick="startGame(6)">☀️ Chapitre 6</button>
+                    <button onclick="openDevEditor()">🛠️ Mode développeur</button>
                 </div>
+
+                <div id="customLevelButtons" class="menu-actions custom-level-actions"></div>
             </div>
         </section>
 
@@ -51,9 +54,45 @@
                 <p class="hint">R ou Entrée pour recommencer · Échap pour le menu</p>
             </div>
         </section>
+
+        <aside id="devPanel" class="dev-panel" aria-label="Mode développeur">
+            <div class="dev-panel-header">
+                <strong>Mode développeur</strong>
+                <button onclick="closeDevEditor()">Quitter</button>
+            </div>
+
+            <label>
+                Thème
+                <select id="devThemeSelect">
+                    <option value="grass">Nature / herbe</option>
+                    <option value="clay">Été / argile</option>
+                    <option value="stone">Pierre</option>
+                    <option value="winter">Hiver</option>
+                    <option value="steel">Métal</option>
+                </select>
+            </label>
+
+            <div class="dev-tools">
+                <button onclick="setDevTool('platform')">Plateforme</button>
+                <button onclick="setDevTool('hazard-bottom')">Pics sol</button>
+                <button onclick="setDevTool('hazard-top')">Pics plafond</button>
+                <button onclick="setDevTool('goal')">Drapeau</button>
+            </div>
+
+            <div class="dev-tools">
+                <button onclick="testDevLevel()">Tester</button>
+                <button onclick="saveDevLevel()">Enregistrer</button>
+                <button onclick="exportDevLevel()">Exporter JSON</button>
+                <button onclick="clearDevLevel()">Vider</button>
+            </div>
+
+            <p id="devStatus" class="dev-status">Clique dans le canvas pour placer un élément.</p>
+            <textarea id="devExport" class="dev-export" readonly placeholder="Le JSON exporté apparaîtra ici."></textarea>
+        </aside>
     </div>
 
-    <script src="game.js?v=20260501-17"></script>
-    <script src="visual-adjustments.js?v=20260501-17"></script>
+    <script src="game.js?v=20260501-18"></script>
+    <script src="visual-adjustments.js?v=20260501-18"></script>
+    <script src="dev-editor.js?v=20260501-18"></script>
 </body>
 </html>
