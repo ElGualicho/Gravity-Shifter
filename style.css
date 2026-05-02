@@ -11,6 +11,8 @@
     --ice: #dff8ff;
     --danger: #ff6b8a;
     --text: #fff8df;
+    --dev-blue: #3a7ca5;
+    --dev-blue-dark: #2c5f7f;
 }
 
 body {
@@ -200,8 +202,74 @@ h2 {
     grid-template-columns: 1fr 1fr;
 }
 
-.custom-level-actions {
-    margin-top: 12px;
+/* ===== LEVEL SELECTOR ===== */
+.level-selector {
+    margin-top: 16px;
+    border: 1px solid rgba(245, 201, 107, 0.35);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+    animation: selectorSlideDown 0.25s ease-out;
+}
+
+.level-selector.hidden {
+    display: none;
+}
+
+@keyframes selectorSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.level-selector h3 {
+    margin: 0;
+    padding: 12px 18px;
+    color: var(--cyan);
+    font-size: 0.82rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(142, 232, 255, 0.12);
+}
+
+.level-scroll {
+    display: grid;
+    gap: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 201, 107, 0.5) transparent;
+}
+
+.level-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.level-scroll::-webkit-scrollbar-thumb {
+    background: rgba(245, 201, 107, 0.45);
+    border-radius: 6px;
+}
+
+.level-scroll button {
+    width: 100%;
+    padding: 13px 18px;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid rgba(142, 232, 255, 0.07);
+    border-radius: 0;
+    font-size: 1rem;
+    background: transparent;
+}
+
+.level-scroll button:last-child {
+    border-bottom: none;
+}
+
+.level-scroll button:hover,
+.level-scroll button:focus-visible {
+    transform: none;
+    background: rgba(245, 201, 107, 0.09);
+    border-color: transparent;
+    box-shadow: none;
 }
 
 button,
@@ -266,6 +334,7 @@ button:focus-visible {
     font-size: 0.9rem;
 }
 
+/* ===== DEV PANEL ===== */
 .dev-panel {
     position: absolute;
     right: 18px;
@@ -275,30 +344,55 @@ button:focus-visible {
     max-height: calc(100vh - 36px);
     overflow-y: auto;
     display: none;
-    padding: 18px;
     border: 1px solid rgba(245, 201, 107, 0.45);
     border-radius: 20px;
-    background: rgba(5, 7, 18, 0.88);
+    background: rgba(5, 7, 18, 0.92);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42), 0 0 32px rgba(245, 201, 107, 0.12);
     backdrop-filter: blur(16px);
+    cursor: default;
 }
 
 .dev-panel.is-visible {
     display: grid;
     gap: 14px;
+    padding: 0 0 18px 0;
 }
 
+/* Header draggable */
 .dev-panel-header {
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
     gap: 12px;
+    padding: 14px 18px;
+    background: var(--dev-blue);
+    border-radius: 19px 19px 0 0;
+    cursor: grab;
+    user-select: none;
+}
+
+.dev-panel-header:active {
+    cursor: grabbing;
+}
+
+.dev-panel-header strong {
+    color: #fff;
+    font-size: 0.95rem;
 }
 
 .dev-panel-header button {
     width: auto;
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.dev-panel > label,
+.dev-panel > .dev-tools,
+.dev-panel > .dev-status,
+.dev-panel > .dev-export {
+    margin: 0 18px;
 }
 
 .dev-panel label {
@@ -308,7 +402,36 @@ button:focus-visible {
     font-size: 0.95rem;
 }
 
-.dev-panel select,
+/* Select thème : texte blanc sur bleu */
+.dev-theme-select {
+    width: 100%;
+    padding: 10px;
+    color: #ffffff;
+    background: var(--dev-blue);
+    border: 1px solid var(--dev-blue-dark);
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+    appearance: auto;
+}
+
+.dev-theme-select:hover {
+    background: var(--dev-blue-dark);
+}
+
+.dev-theme-select:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(245, 201, 107, 0.25);
+}
+
+.dev-theme-select option {
+    background: var(--dev-blue-dark);
+    color: #ffffff;
+}
+
 .dev-export {
     width: 100%;
     color: var(--text);
