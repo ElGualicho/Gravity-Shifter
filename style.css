@@ -347,10 +347,12 @@ button:focus-visible {
     top: 18px;
     z-index: 35;
     width: min(360px, calc(100vw - 36px));
+    /* Hauteur max = viewport moins marges, le panel ne déborde jamais */
     max-height: calc(100vh - 36px);
-    overflow-y: scroll;
-    scrollbar-width: none;
+    /* Flexbox colonne : le textarea absorbe l'espace restant sans déborder */
     display: none;
+    flex-direction: column;
+    overflow: hidden;
     border: 1px solid rgba(245, 201, 107, 0.45);
     border-radius: 20px;
     background: rgba(5, 7, 18, 0.92);
@@ -359,19 +361,30 @@ button:focus-visible {
     cursor: default;
 }
 
-.dev-panel::-webkit-scrollbar {
+.dev-panel.is-visible {
+    display: flex;
+}
+
+/* Zone scrollable qui contient tous les contrôles sauf le header */
+.dev-panel-body {
+    flex: 1;
+    overflow-y: scroll;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    min-height: 0;
+}
+
+.dev-panel-body::-webkit-scrollbar {
     width: 0;
     background: transparent;
 }
 
-.dev-panel.is-visible {
-    display: grid;
-    gap: 14px;
-    padding: 0 0 18px 0;
-}
-
-/* Header draggable */
+/* Header draggable — taille fixe, ne shrink jamais */
 .dev-panel-header {
+    flex-shrink: 0;
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
@@ -398,13 +411,6 @@ button:focus-visible {
     font-size: 0.85rem;
     border-radius: 8px;
     cursor: pointer;
-}
-
-.dev-panel > label,
-.dev-panel > .dev-tools,
-.dev-panel > .dev-status,
-.dev-panel > .dev-export {
-    margin: 0 18px;
 }
 
 .dev-panel label {
@@ -444,15 +450,6 @@ button:focus-visible {
     color: #ffffff;
 }
 
-.dev-export {
-    width: 100%;
-    color: var(--text);
-    border: 1px solid rgba(142, 232, 255, 0.18);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 10px;
-}
-
 .dev-tools {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -471,11 +468,22 @@ button:focus-visible {
     line-height: 1.4;
 }
 
+/* Textarea JSON : hauteur fixe contenue, pas de resize */
 .dev-export {
-    min-height: 150px;
-    resize: vertical;
+    width: 100%;
+    height: 110px;
+    min-height: 0;
+    resize: none;
+    padding: 10px;
+    color: var(--text);
+    border: 1px solid rgba(142, 232, 255, 0.18);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
     font-family: Consolas, monospace;
     font-size: 0.78rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(142, 232, 255, 0.3) transparent;
 }
 
 @media (max-width: 720px) {
