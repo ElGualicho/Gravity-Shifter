@@ -35,7 +35,7 @@ Chaque section de niveau suit la logique :
 | 1 | 2 | Sol + plafond. Apprentissage. | `platform1` + `background` |
 | 2 | 3 | +1 plateforme milieu. Cristal plafond sur c2. | `platform1` + `background` |
 | 3 | 4 | +2 plateformes milieu à hauteurs différentes. | `platform1` + `background` |
-| 4 | 5 | 3 plafonds + 1 milieu. Milieu bloque l'accès direct à c3. Cristaux denses. | `platform2` + `background_winter` |
+| 4 | 5 | 3 plafonds + 1 plateforme milieu. Sol hiver dédié en `1672x85`. | `platform2` + `floor_winter` + `background_winter` |
 
 ### Chemin niveau 4
 ```
@@ -51,21 +51,23 @@ c2 → milieu1 → c3.
 - Menu principal intégré en HTML/CSS avec direction artistique fantasy/arcane cohérente avec **Gravity Wizard**.
 - Écran de **game over** dédié, sans `alert`, affiché par-dessus le jeu avec options : recommencer le chapitre ou revenir au menu.
 - Raccourcis clavier après échec : `R` ou `Entrée` pour relancer, `Échap` pour revenir au menu.
-- Badge HUD indiquant le chapitre en cours.
+- Le texte bas d'écran de gameplay a été supprimé pour garder la lecture du sol propre.
 
 ---
 
 ## Fichiers
 ```
 Gravity-Shifter/
-├── index.html      # Canvas + overlays menu/game over
-├── game.js          # Physique, niveaux, rendu, logique UI
-├── style.css        # Direction artistique et interfaces HTML
+├── index.html              # Canvas + overlays menu/game over
+├── game.js                  # Physique, niveaux, rendu principal, logique UI
+├── visual-adjustments.js    # Ajustements visuels sans impact sur les collisions
+├── style.css                # Direction artistique et interfaces HTML
 └── assets/
     ├── background.png          # Fond niveaux 1-3
     ├── background_winter.png   # Fond niveau 4 (hiver)
+    ├── floor_winter.png        # Sol continu niveau 4, 1672x85 px
     ├── platform1.png           # Plateforme herbe/terre (niveaux 1-3)
-    ├── platform2.png           # Plateforme acier (niveau 4)
+    ├── platform2.png           # Plateforme acier/glace (niveau 4)
     ├── flag.png
     ├── pics.png                # Cristaux / pièges
     └── walk1-4.png             # Frames d'animation joueur
@@ -83,8 +85,20 @@ Gravity-Shifter/
 | `FRIC`    | `0.78`| Friction à l'arrêt |
 | `PLAT_W`  | `320` | Largeur fixe des plateformes |
 | `PLAT_H`  | `60`  | Hauteur fixe des plateformes |
+| `FLOOR_H` | `65` | Hauteur du sol standard |
+| `WINTER_FLOOR_H` | `85` | Hauteur du sol hiver du niveau 4 |
 | `CRYSTAL_W/H` | `65 / 70` | Taille naturelle d'un cristal |
 | `HBOX_MX/MY`  | `20 / 18` | Marge de tolérance hitbox cristaux |
+
+---
+
+## Ajustements visuels (`visual-adjustments.js`)
+Les réglages suivants modifient uniquement le rendu à l'écran. Ils ne changent pas la gravité, les collisions, les hitbox ni le level design.
+
+| Constante | Valeur | Rôle |
+|-----------|--------|------|
+| `SPRITE_VISUAL_Y_OFFSET` | `4` | Décale visuellement `walk1-4.png` et `pics.png` de 4 px vers le bas |
+| `FLAG_VISUAL_Y_OFFSET` | `7` | Décale visuellement `flag.png` de 7 px vers le bas |
 
 ---
 
@@ -95,6 +109,8 @@ Gravity-Shifter/
 - [x] Plateformes sol, plafond et milieu
 - [x] Animations joueur (4 frames)
 - [x] Assets différenciés par niveau (platform1/2, bg normal/hiver)
+- [x] Sol hiver dédié au niveau 4 (`floor_winter.png`)
+- [x] Ajustements visuels séparés de la physique
 - [x] Positions plateformes adaptatives (% de l'écran)
 - [x] Menu principal HTML/CSS cohérent avec la direction artistique
 - [x] Écran de game over dédié sans `alert`
