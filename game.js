@@ -10,6 +10,11 @@ let currentLevel = 1;
 let gravityDirection = 1;
 let keys = {};
 
+// Niveau de test du mode développeur — stocké séparément pour éviter
+// le push/pop fragile dans customLevels qui faisait perdre le thème.
+const DEV_TEST_SLOT = -1;
+let devTestLevel = null;
+
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -54,7 +59,6 @@ const walkFrames = [];
 });
 
 // ─── CONSTANTES PHYSIQUE VALIDÉES ────────────────────────────────────────────
-// Ne pas modifier ces valeurs sans décision explicite : elles correspondent à la gravité validée au chapitre 4.
 const PLAYER_W = 75;
 const PLAYER_H = 95;
 const CRYSTAL_W = 65;
@@ -97,17 +101,17 @@ let hazards = [];
 let goal = { x: 0, y: 0, w: 100, h: 110 };
 
 const themePresets = {
-    grass: { background: backgroundImg, floor: floorGrassImg, platform: platImg, floorHeight: FLOOR_H },
-    clay: { background: bgSummerImg, floor: floorClayImg, platform: platImg7, floorHeight: FLOOR_H },
-    stone: { background: backgroundImg, floor: floorStoneImg, platform: platImg, floorHeight: FLOOR_H },
-    winter: { background: bgWinterImg, floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
-    steel: { background: bgSteelImg, floor: floorSteelImg, platform: platImg4, floorHeight: STEEL_FLOOR_H }
+    grass:  { background: backgroundImg, floor: floorGrassImg,  platform: platImg,  floorHeight: FLOOR_H },
+    clay:   { background: bgSummerImg,   floor: floorClayImg,   platform: platImg7, floorHeight: FLOOR_H },
+    stone:  { background: backgroundImg, floor: floorStoneImg,  platform: platImg,  floorHeight: FLOOR_H },
+    winter: { background: bgWinterImg,   floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
+    steel:  { background: bgSteelImg,    floor: floorSteelImg,  platform: platImg4, floorHeight: STEEL_FLOOR_H }
 };
 
 const levelThemes = {
-    1: { ...themePresets.grass, platform: platImg },
-    2: { ...themePresets.clay, platform: platImg },
-    3: { ...themePresets.stone, platform: platImg },
+    1: { ...themePresets.grass,  platform: platImg },
+    2: { ...themePresets.clay,   platform: platImg },
+    3: { ...themePresets.stone,  platform: platImg },
     4: themePresets.winter,
     5: themePresets.steel,
     6: themePresets.clay
@@ -132,7 +136,9 @@ function getTotalLevelCount() {
     return BUILTIN_LEVEL_COUNT + customLevels.length;
 }
 
+// Retourne les données du niveau custom, ou devTestLevel si on est en mode test.
 function getCustomLevel(level = currentLevel) {
+    if (level === DEV_TEST_SLOT) return devTestLevel;
     if (level <= BUILTIN_LEVEL_COUNT) return null;
     return customLevels[level - BUILTIN_LEVEL_COUNT - 1] || null;
 }
@@ -336,6 +342,15 @@ function loadLevel(lv) {
     }
 }
 
+// Lance le niveau de test du mode développeur sans polluer customLevels.
+// Le thème et les données sont stockés dans devTestLevel et lus via DEV_TEST_SLOT.
+function startDevTest(levelData) {
+    devTestLevel = levelData;
+    setOverlayVisibility(false, false);
+    gameState = 'PLAYING';
+    loadLevel(DEV_TEST_SLOT);
+}
+
 function drawStaticFloor(img) {
     if (!img.complete || !img.naturalWidth) return;
 
@@ -372,6 +387,7 @@ function setOverlayVisibility(menuVisible, gameOverVisible) {
 
 function showMenu() {
     gameState = 'MENU';
+    devTestLevel = null;
     keys = {};
     setOverlayVisibility(true, false);
     if (typeof syncCustomLevelButtons === 'function') syncCustomLevelButtons();
@@ -498,7 +514,10 @@ function update() {
 
     if (player.x < goal.x + goal.w && player.x + player.width > goal.x &&
         player.y < goal.y + goal.h && player.y + player.height > goal.y) {
-        if (currentLevel < getTotalLevelCount()) {
+        if (currentLevel === DEV_TEST_SLOT) {
+            // En mode test, victoire = retour au menu sans passer au niveau suivant
+            showMenu();
+        } else if (currentLevel < getTotalLevelCount()) {
             loadLevel(currentLevel + 1);
         } else {
             showMenu();
