@@ -75,10 +75,10 @@ const FLOOR_H     = 65;
 const HBOX_MX     = 20;
 const HBOX_MY     = 18;
 
-const GRAVITY     = 0.8;
-const MAX_VY      = 13;
-const MAX_VX      = 9;
-const ACCEL       = 1.3;
+const GRAVITY     = 1.0;  // était 0.8
+const MAX_VY      = 15;   // était 13
+const MAX_VX      = 11;   // était 9
+const ACCEL       = 1.6;  // était 1.3
 const FRIC        = 0.78;
 const FLIP_OFFSET = 12;
 
