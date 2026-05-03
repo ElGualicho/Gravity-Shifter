@@ -75,14 +75,14 @@ const FLOOR_H     = 65;
 const HBOX_MX     = 20;
 const HBOX_MY     = 18;
 
-const GRAVITY     = 1.0;  // était 0.8
-const MAX_VY      = 15;   // était 13
-const MAX_VX      = 11;   // était 9
-const ACCEL       = 1.6;  // était 1.3
+const GRAVITY     = 0.9;   // était 1.0
+const MAX_VY      = 14;    // était 15
+const MAX_VX      = 10;    // était 11
+const ACCEL       = 1.45;  // était 1.6
 const FRIC        = 0.78;
 const FLIP_OFFSET = 12;
 
-const TOTAL_LEVELS = 4;
+const TOTAL_LEVELS = 5;
 
 const player = {
     x: 100, y: 300,
@@ -105,7 +105,7 @@ const themePresets = {
     steel:  { background: bgSteelImg,   floor: floorSteelImg,  platform: platSteelImg,  flag: flagSteelImg,  pics: picsSteelImg,  floorHeight: FLOOR_H }
 };
 
-const levelThemes = { 1: 'nature', 2: 'ice', 3: 'clay', 4: 'steel' };
+const levelThemes = { 1: 'nature', 2: 'ice', 3: 'clay', 4: 'steel', 5: 'steel' };
 
 function getTheme(level) {
     const lv = level !== undefined ? level : currentLevel;
@@ -210,6 +210,53 @@ function buildLevel4(W, H, floorY, CEIL_Y) {
     goal.y = floorY - 110;
 }
 
+function buildLevel5(W, H, floorY, CEIL_Y) {
+    // Steel avancé — plateformes plus étroites, piques denses sol + plafond,
+    // deux îlots intermédiaires à traverser dans les deux sens de gravité.
+    const PW = 200; // plateformes plus courtes que PLAT_W
+
+    const c1x = W * 0.06 | 0;
+    const m1x = W * 0.24 | 0;
+    const m1y = H * 0.44 | 0;
+    const c2x = W * 0.40 | 0;
+    const m2x = W * 0.55 | 0;
+    const m2y = H * 0.36 | 0;
+    const c3x = W * 0.70 | 0;
+    const m3x = W * 0.84 | 0;
+    const m3y = H * 0.50 | 0;
+
+    platforms = [
+        makeFloor(W, floorY),
+        makePlatform(c1x, CEIL_Y,  PW, PLAT_H),
+        makePlatform(m1x, m1y,     PW, PLAT_H),
+        makePlatform(c2x, CEIL_Y,  PW, PLAT_H),
+        makePlatform(m2x, m2y,     PW, PLAT_H),
+        makePlatform(c3x, CEIL_Y,  PW, PLAT_H),
+        makePlatform(m3x, m3y,     PW, PLAT_H)
+    ];
+
+    hazards = [
+        // Piques au sol
+        { x: c1x + 60,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m1x + 50,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 60,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m2x + 50,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c3x + 60,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m3x + 50,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        // Piques au plafond (sous les plateformes plafond)
+        { x: c1x + 30,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+        { x: c2x + 30,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+        { x: c3x + 40,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
+        // Piques suspendus sous les îlots intermédiaires
+        { x: m1x + 40,  y: m1y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' },
+        { x: m2x + 40,  y: m2y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' },
+        { x: m3x + 30,  y: m3y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' }
+    ];
+
+    goal.x = Math.min(m3x + PW + 60, W - goal.w - 50);
+    goal.y = floorY - 110;
+}
+
 function denormalizeRect(rect, W, H) {
     return {
         x: Math.round((rect.xRatio ?? 0) * W),
@@ -262,6 +309,7 @@ function loadLevel(lv) {
     else if (lv === 2) buildLevel2(W, H, floorY, CEIL_Y);
     else if (lv === 3) buildLevel3(W, H, floorY, CEIL_Y);
     else if (lv === 4) buildLevel4(W, H, floorY, CEIL_Y);
+    else if (lv === 5) buildLevel5(W, H, floorY, CEIL_Y);
 }
 
 // ─── MODE DÉVELOPPEUR ────────────────────────────────────────────────────────
