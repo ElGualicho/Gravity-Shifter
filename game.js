@@ -10,8 +10,7 @@ let currentLevel = 1;
 let gravityDirection = 1;
 let keys = {};
 
-// Niveau de test du mode développeur — stocké séparément pour éviter
-// le push/pop fragile dans customLevels qui faisait perdre le thème.
+// Niveau de test du mode développeur
 const DEV_TEST_SLOT = -1;
 let devTestLevel = null;
 
@@ -35,52 +34,56 @@ function loadImage(src) {
     return img;
 }
 
-const backgroundImg = loadImage('assets/background.png');
-const bgSummerImg = loadImage('assets/background_summer.png');
-const bgWinterImg = loadImage('assets/background_winter.png');
-const bgSteelImg = loadImage('assets/background_steel.png');
+const backgroundImg    = loadImage('assets/background.png');
+const bgNatureImg      = loadImage('assets/background_nature.png');
+const bgIceImg         = loadImage('assets/background_ice.png');
+const bgClayImg        = loadImage('assets/background_clay.png');
+const bgSteelImg       = loadImage('assets/background_steel.png');
 
-const floorGrassImg = loadImage('assets/floor_grass.png');
-const floorClayImg = loadImage('assets/floor_clay.png');
-const floorStoneImg = loadImage('assets/floor_stone.png');
-const floorWinterImg = loadImage('assets/floor_winter.png');
-const floorSteelImg = loadImage('assets/floor_steel.png');
+const floorNatureImg   = loadImage('assets/floor_nature.png');
+const floorIceImg      = loadImage('assets/floor_ice.png');
+const floorClayImg     = loadImage('assets/floor_clay.png');
+const floorSteelImg    = loadImage('assets/floor_steel.png');
 
-const platImg = loadImage('assets/platform1.png');
-const platImg2 = loadImage('assets/platform2.png');
-const platImg4 = loadImage('assets/platform4.png');
-const platImg7 = loadImage('assets/platform7.png');
-const flagImg = loadImage('assets/flag.png');
-const picsImg = loadImage('assets/pics.png');
+const platNatureImg    = loadImage('assets/platform_nature.png');
+const platIceImg       = loadImage('assets/platform_ice.png');
+const platClayImg      = loadImage('assets/platform_clay.png');
+const platSteelImg     = loadImage('assets/platform_steel.png');
+
+const flagNatureImg    = loadImage('assets/flag_nature.png');
+const flagIceImg       = loadImage('assets/flag_ice.png');
+const flagClayImg      = loadImage('assets/flag_clay.png');
+const flagSteelImg     = loadImage('assets/flag_steel.png');
+
+const picsNatureImg    = loadImage('assets/pics_nature.png');
+const picsIceImg       = loadImage('assets/pics_ice.png');
+const picsClayImg      = loadImage('assets/pics_clay.png');
+const picsSteelImg     = loadImage('assets/pics_steel.png');
 
 const walkFrames = [];
-['walk1.png', 'walk2.png', 'walk3.png', 'walk4.png'].forEach((name, index) => {
+['walk1.png', 'walk2.png', 'walk3.png'].forEach((name, index) => {
     walkFrames[index] = loadImage(`assets/${name}`);
 });
 
-// ─── CONSTANTES PHYSIQUE VALIDÉES ────────────────────────────────────────────
-const PLAYER_W = 75;
-const PLAYER_H = 95;
-const CRYSTAL_W = 65;
-const CRYSTAL_H = 70;
-const PLAT_W = 320;
-const PLAT_H = 60;
-const FLOOR_H = 65;
-const WINTER_FLOOR_H = 85;
-const STEEL_FLOOR_H = 65;
-const HBOX_MX = 20;
-const HBOX_MY = 18;
+// ─── CONSTANTES PHYSIQUE ──────────────────────────────────────────────────────
+const PLAYER_W   = 75;
+const PLAYER_H   = 95;
+const CRYSTAL_W  = 65;
+const CRYSTAL_H  = 70;
+const PLAT_W     = 320;
+const PLAT_H     = 60;
+const FLOOR_H    = 65;
+const HBOX_MX    = 20;
+const HBOX_MY    = 18;
 
-const GRAVITY = 0.8;
-const MAX_VY = 13;
-const MAX_VX = 9;
-const ACCEL = 1.3;
-const FRIC = 0.78;
+const GRAVITY    = 0.8;
+const MAX_VY     = 13;
+const MAX_VX     = 9;
+const ACCEL      = 1.3;
+const FRIC       = 0.78;
 const FLIP_OFFSET = 12;
 
-const BUILTIN_LEVEL_COUNT = 6;
-const CUSTOM_LEVEL_STORAGE_KEY = 'gravityWizardCustomLevels';
-let customLevels = [];
+const TOTAL_LEVELS = 4;
 
 const player = {
     x: 100,
@@ -97,74 +100,60 @@ const player = {
 };
 
 let platforms = [];
-let hazards = [];
-let goal = { x: 0, y: 0, w: 100, h: 110 };
+let hazards   = [];
+let goal      = { x: 0, y: 0, w: 100, h: 110 };
 
+// ─── THÈMES ───────────────────────────────────────────────────────────────────
 const themePresets = {
-    grass:  { background: backgroundImg, floor: floorGrassImg,  platform: platImg,  floorHeight: FLOOR_H },
-    clay:   { background: bgSummerImg,   floor: floorClayImg,   platform: platImg7, floorHeight: FLOOR_H },
-    stone:  { background: backgroundImg, floor: floorStoneImg,  platform: platImg,  floorHeight: FLOOR_H },
-    winter: { background: bgWinterImg,   floor: floorWinterImg, platform: platImg2, floorHeight: WINTER_FLOOR_H },
-    steel:  { background: bgSteelImg,    floor: floorSteelImg,  platform: platImg4, floorHeight: STEEL_FLOOR_H }
+    nature: {
+        background: bgNatureImg,
+        floor:      floorNatureImg,
+        platform:   platNatureImg,
+        flag:       flagNatureImg,
+        pics:       picsNatureImg,
+        floorHeight: FLOOR_H
+    },
+    ice: {
+        background: bgIceImg,
+        floor:      floorIceImg,
+        platform:   platIceImg,
+        flag:       flagIceImg,
+        pics:       picsIceImg,
+        floorHeight: FLOOR_H
+    },
+    clay: {
+        background: bgClayImg,
+        floor:      floorClayImg,
+        platform:   platClayImg,
+        flag:       flagClayImg,
+        pics:       picsClayImg,
+        floorHeight: FLOOR_H
+    },
+    steel: {
+        background: bgSteelImg,
+        floor:      floorSteelImg,
+        platform:   platSteelImg,
+        flag:       flagSteelImg,
+        pics:       picsSteelImg,
+        floorHeight: FLOOR_H
+    }
 };
 
 const levelThemes = {
-    1: { ...themePresets.grass,  platform: platImg },
-    2: { ...themePresets.clay,   platform: platImg },
-    3: { ...themePresets.stone,  platform: platImg },
-    4: themePresets.winter,
-    5: themePresets.steel,
-    6: themePresets.clay
+    1: 'nature',
+    2: 'ice',
+    3: 'clay',
+    4: 'steel'
 };
 
-function loadCustomLevels() {
-    try {
-        const stored = localStorage.getItem(CUSTOM_LEVEL_STORAGE_KEY);
-        customLevels = stored ? JSON.parse(stored) : [];
-        if (!Array.isArray(customLevels)) customLevels = [];
-    } catch (err) {
-        console.warn('Impossible de charger les niveaux custom', err);
-        customLevels = [];
+function getTheme(level = currentLevel) {
+    if (level === DEV_TEST_SLOT && devTestLevel) {
+        return themePresets[devTestLevel.theme] || themePresets.nature;
     }
+    return themePresets[levelThemes[level]] || themePresets.nature;
 }
 
-function saveCustomLevels() {
-    localStorage.setItem(CUSTOM_LEVEL_STORAGE_KEY, JSON.stringify(customLevels));
-}
-
-function getTotalLevelCount() {
-    return BUILTIN_LEVEL_COUNT + customLevels.length;
-}
-
-// Retourne les données du niveau custom, ou devTestLevel si on est en mode test.
-function getCustomLevel(level = currentLevel) {
-    if (level === DEV_TEST_SLOT) return devTestLevel;
-    if (level <= BUILTIN_LEVEL_COUNT) return null;
-    return customLevels[level - BUILTIN_LEVEL_COUNT - 1] || null;
-}
-
-function getLevelTheme(level = currentLevel) {
-    const custom = getCustomLevel(level);
-    if (custom) return themePresets[custom.theme] || themePresets.grass;
-    return levelThemes[level] || levelThemes[1];
-}
-
-function getCurrentBackgroundImage(level = currentLevel) {
-    return getLevelTheme(level).background;
-}
-
-function getCurrentPlatformImage(level = currentLevel) {
-    return getLevelTheme(level).platform;
-}
-
-function getCurrentFloorImage(level = currentLevel) {
-    return getLevelTheme(level).floor;
-}
-
-function getFloorHeight(level = currentLevel) {
-    return getLevelTheme(level).floorHeight;
-}
-
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
 function makeFloor(W, floorY) {
     return { x: 0, y: floorY, w: W * 2, h: 120, isFloor: true };
 }
@@ -173,13 +162,78 @@ function makePlatform(x, y, w = PLAT_W, h = PLAT_H) {
     return { x, y, w, h };
 }
 
-function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
+// ─── CONSTRUCTION DES NIVEAUX ─────────────────────────────────────────────────
+function buildLevel1(W, H, floorY, CEIL_Y) {
+    // Nature — introduction, 2 plateformes plafond
+    const c1x = W * 0.08 | 0;
+    const c2x = W * 0.48 | 0;
+    platforms = [
+        makeFloor(W, floorY),
+        makePlatform(c1x, CEIL_Y),
+        makePlatform(c2x, CEIL_Y)
+    ];
+    hazards = [
+        { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
+    ];
+    goal.x = c2x + PLAT_W + 150;
+    goal.y = floorY - 110;
+}
+
+function buildLevel2(W, H, floorY, CEIL_Y) {
+    // Ice — plateforme intermédiaire introduite
+    const c1x = W * 0.07 | 0;
+    const m1x = W * 0.28 | 0;
+    const m1y = H * 0.40 | 0;
+    const c2x = W * 0.47 | 0;
+    platforms = [
+        makeFloor(W, floorY),
+        makePlatform(c1x, CEIL_Y),
+        makePlatform(m1x, m1y),
+        makePlatform(c2x, CEIL_Y)
+    ];
+    hazards = [
+        { x: c1x + 80,  y: floorY - CRYSTAL_H,  w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m1x + 40,  y: floorY - CRYSTAL_H,  w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 60,  y: floorY - CRYSTAL_H,  w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 250, y: CEIL_Y + PLAT_H,     w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top'    }
+    ];
+    goal.x = c2x + PLAT_W + 150;
+    goal.y = floorY - 110;
+}
+
+function buildLevel3(W, H, floorY, CEIL_Y) {
+    // Clay — parcours avec 2 plateformes intermédiaires
+    const c1x = W * 0.07 | 0;
+    const m1x = W * 0.27 | 0;
+    const m1y = H * 0.40 | 0;
+    const c2x = W * 0.46 | 0;
+    const m2x = W * 0.65 | 0;
+    const m2y = H * 0.52 | 0;
+    platforms = [
+        makeFloor(W, floorY),
+        makePlatform(c1x, CEIL_Y),
+        makePlatform(m1x, m1y),
+        makePlatform(c2x, CEIL_Y),
+        makePlatform(m2x, m2y)
+    ];
+    hazards = [
+        { x: c1x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m1x + 50, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m2x + 50, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
+    ];
+    goal.x = m2x + PLAT_W + 20;
+    goal.y = floorY - 110;
+}
+
+function buildLevel4(W, H, floorY, CEIL_Y) {
+    // Steel — niveau avancé, piques au plafond aussi
     const c1x = W * 0.09 | 0;
     const c2x = W * 0.34 | 0;
     const m1x = W * 0.49 | 0;
     const c3x = W * 0.62 | 0;
     const m1y = H * 0.47 | 0;
-
     platforms = [
         makeFloor(W, floorY),
         makePlatform(c1x, CEIL_Y),
@@ -187,51 +241,19 @@ function buildAdvancedLevel(W, H, floorY, CEIL_Y) {
         makePlatform(m1x, m1y),
         makePlatform(c3x, CEIL_Y)
     ];
-
     hazards = [
-        { x: c1x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c2x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: m1x + 70, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c3x + 100, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
+        { x: c1x + 90,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 70,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m1x + 70,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c3x + 100, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 80,  y: CEIL_Y + PLAT_H,    w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top'   },
+        { x: m1x + 80,  y: CEIL_Y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top'   }
     ];
-
     goal.x = Math.min(c3x + PLAT_W + 90, W - goal.w - 70);
     goal.y = floorY - 110;
 }
 
-function buildHardSummerLevel(W, H, floorY, CEIL_Y) {
-    const c1x = W * 0.08 | 0;
-    const m1x = W * 0.25 | 0;
-    const c2x = W * 0.41 | 0;
-    const m2x = W * 0.57 | 0;
-    const c3x = W * 0.70 | 0;
-
-    const m1y = H * 0.55 | 0;
-    const m2y = H * 0.34 | 0;
-
-    platforms = [
-        makeFloor(W, floorY),
-        makePlatform(c1x, CEIL_Y),
-        makePlatform(m1x, m1y),
-        makePlatform(c2x, CEIL_Y),
-        makePlatform(m2x, m2y),
-        makePlatform(c3x, CEIL_Y)
-    ];
-
-    hazards = [
-        { x: c1x + 85, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: m1x + 105, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c2x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: m2x + 105, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c3x + 90, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c2x + 245, y: CEIL_Y + PLAT_H, w: CRYSTAL_W, h: CRYSTAL_H, side: 'top' }
-    ];
-
-    goal.x = Math.min(c3x + PLAT_W + 70, W - goal.w - 60);
-    goal.y = floorY - 110;
-}
-
-function denormalizeRect(rect, W, H, floorY) {
+function denormalizeRect(rect, W, H) {
     return {
         x: Math.round((rect.xRatio ?? 0) * W),
         y: Math.round((rect.yRatio ?? 0) * H),
@@ -241,21 +263,18 @@ function denormalizeRect(rect, W, H, floorY) {
     };
 }
 
-function buildCustomLevel(levelData, W, H, floorY) {
+function buildDevLevel(levelData, W, H, floorY) {
     platforms = [makeFloor(W, floorY)];
-
     (levelData.platforms || []).forEach(p => {
-        const r = denormalizeRect(p, W, H, floorY);
+        const r = denormalizeRect(p, W, H);
         platforms.push(makePlatform(r.x, r.y, r.w, r.h));
     });
-
     hazards = (levelData.hazards || []).map(h => {
-        const r = denormalizeRect(h, W, H, floorY);
+        const r = denormalizeRect(h, W, H);
         return { x: r.x, y: r.y, w: r.w, h: r.h, side: h.side || 'bottom' };
     });
-
     const savedGoal = levelData.goal || { xRatio: 0.82, yRatio: 0.78, w: 100, h: 110 };
-    const g = denormalizeRect(savedGoal, W, H, floorY);
+    const g = denormalizeRect(savedGoal, W, H);
     goal = { x: g.x, y: g.y, w: savedGoal.w || 100, h: savedGoal.h || 110 };
 }
 
@@ -269,81 +288,26 @@ function loadLevel(lv) {
     currentLevel = lv;
     player.x = 100;
 
-    const W = canvas.width;
-    const H = canvas.height;
-    const floorH = getFloorHeight(lv);
+    const W      = canvas.width;
+    const H      = canvas.height;
+    const floorH = getTheme(lv).floorHeight;
     const floorY = H - floorH;
     const CEIL_Y = 40;
-    const fp = makeFloor(W, floorY);
+
     player.y = floorY - PLAYER_H - 2;
 
-    const custom = getCustomLevel(lv);
-    if (custom) {
-        buildCustomLevel(custom, W, H, floorY);
+    if (lv === DEV_TEST_SLOT && devTestLevel) {
+        buildDevLevel(devTestLevel, W, H, floorY);
         return;
     }
 
-    if (lv === 1) {
-        const c1x = W * 0.08 | 0;
-        const c2x = W * 0.48 | 0;
-        platforms = [fp,
-            makePlatform(c1x, CEIL_Y),
-            makePlatform(c2x, CEIL_Y)
-        ];
-        hazards = [
-            { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: c2x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
-        ];
-        goal.x = c2x + PLAT_W + 150;
-        goal.y = floorY - 110;
-    } else if (lv === 2) {
-        const c1x = W * 0.07 | 0;
-        const m1x = W * 0.28 | 0;
-        const m1y = H * 0.40 | 0;
-        const c2x = W * 0.47 | 0;
-        platforms = [fp,
-            makePlatform(c1x, CEIL_Y),
-            makePlatform(m1x, m1y),
-            makePlatform(c2x, CEIL_Y)
-        ];
-        hazards = [
-            { x: c1x + 80, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: m1x + 40, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: c2x + 60, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: c2x + 250, y: CEIL_Y + PLAT_H, w: CRYSTAL_W, h: CRYSTAL_H, side: 'top' }
-        ];
-        goal.x = c2x + PLAT_W + 150;
-        goal.y = floorY - 110;
-    } else if (lv === 3) {
-        const c1x = W * 0.07 | 0;
-        const m1x = W * 0.27 | 0;
-        const m1y = H * 0.40 | 0;
-        const c2x = W * 0.46 | 0;
-        const m2x = W * 0.65 | 0;
-        const m2y = H * 0.52 | 0;
-        platforms = [fp,
-            makePlatform(c1x, CEIL_Y),
-            makePlatform(m1x, m1y),
-            makePlatform(c2x, CEIL_Y),
-            makePlatform(m2x, m2y)
-        ];
-        hazards = [
-            { x: c1x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: m1x + 50, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: c2x + 70, y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-            { x: m2x + 50, y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' }
-        ];
-        goal.x = m2x + PLAT_W + 20;
-        goal.y = floorY - 110;
-    } else if (lv === 4 || lv === 5) {
-        buildAdvancedLevel(W, H, floorY, CEIL_Y);
-    } else if (lv === 6) {
-        buildHardSummerLevel(W, H, floorY, CEIL_Y);
-    }
+    if      (lv === 1) buildLevel1(W, H, floorY, CEIL_Y);
+    else if (lv === 2) buildLevel2(W, H, floorY, CEIL_Y);
+    else if (lv === 3) buildLevel3(W, H, floorY, CEIL_Y);
+    else if (lv === 4) buildLevel4(W, H, floorY, CEIL_Y);
 }
 
-// Lance le niveau de test du mode développeur sans polluer customLevels.
-// Le thème et les données sont stockés dans devTestLevel et lus via DEV_TEST_SLOT.
+// ─── MODE DÉVELOPPEUR ─────────────────────────────────────────────────────────
 function startDevTest(levelData) {
     devTestLevel = levelData;
     setOverlayVisibility(false, false);
@@ -351,22 +315,22 @@ function startDevTest(levelData) {
     loadLevel(DEV_TEST_SLOT);
 }
 
-function drawStaticFloor(img) {
+// ─── RENDU SOL ────────────────────────────────────────────────────────────────
+function drawStaticFloor() {
+    const theme  = getTheme();
+    const img    = theme.floor;
+    const floorH = theme.floorHeight;
     if (!img.complete || !img.naturalWidth) return;
-
-    const floorH = getFloorHeight();
     const yPos = canvas.height - floorH;
-    const tileWidth = img.naturalWidth;
-
-    for (let x = 0; x < canvas.width; x += tileWidth) {
-        ctx.drawImage(img, x, yPos, tileWidth, floorH);
+    for (let x = 0; x < canvas.width; x += img.naturalWidth) {
+        ctx.drawImage(img, x, yPos, img.naturalWidth, floorH);
     }
 }
 
+// ─── ANIMATION ────────────────────────────────────────────────────────────────
 function updatePlayerAnimation() {
     const movingOnSurface = player.onSurface && Math.abs(player.velX) > 0.4;
     player.isMoving = movingOnSurface;
-
     if (movingOnSurface) {
         player.currentFrame = (player.currentFrame + player.animationSpeed) % walkFrames.length;
     } else {
@@ -380,6 +344,7 @@ function getCurrentWalkFrame() {
     return frame?.complete && frame.naturalWidth ? frame : walkFrames[0];
 }
 
+// ─── OVERLAYS ─────────────────────────────────────────────────────────────────
 function setOverlayVisibility(menuVisible, gameOverVisible) {
     menuEl.classList.toggle('is-visible', menuVisible);
     gameOverEl.classList.toggle('is-visible', gameOverVisible);
@@ -390,7 +355,6 @@ function showMenu() {
     devTestLevel = null;
     keys = {};
     setOverlayVisibility(true, false);
-    if (typeof syncCustomLevelButtons === 'function') syncCustomLevelButtons();
 }
 
 function startGame(lv) {
@@ -419,6 +383,7 @@ function resetGame(msg) {
     showGameOver(msg);
 }
 
+// ─── BOUCLE PRINCIPALE ───────────────────────────────────────────────────────
 function update() {
     if (gameState !== 'PLAYING') {
         draw();
@@ -445,42 +410,26 @@ function update() {
             canMoveX = false;
         }
     });
-
     if (canMoveX) player.x = nextX;
     else player.velX = 0;
 
     if (player.x < 0) { player.x = 0; player.velX = 0; }
-    if (player.x + player.width > canvas.width) {
-        player.x = canvas.width - player.width;
-        player.velX = 0;
-    }
+    if (player.x + player.width > canvas.width) { player.x = canvas.width - player.width; player.velX = 0; }
 
     player.velY += GRAVITY * gravityDirection;
-    player.velY = Math.max(-MAX_VY, Math.min(MAX_VY, player.velY));
-    player.y += player.velY;
+    player.velY  = Math.max(-MAX_VY, Math.min(MAX_VY, player.velY));
+    player.y    += player.velY;
     player.onSurface = false;
 
     platforms.forEach(p => {
         if (player.x < p.x + p.w && player.x + player.width > p.x &&
             player.y < p.y + p.h && player.y + player.height > p.y) {
             if (gravityDirection === 1) {
-                if (player.velY >= 0) {
-                    player.y = p.y - player.height;
-                    player.velY = 0;
-                    player.onSurface = true;
-                } else {
-                    player.y = p.y + p.h;
-                    player.velY = 0;
-                }
+                if (player.velY >= 0) { player.y = p.y - player.height; player.velY = 0; player.onSurface = true; }
+                else                  { player.y = p.y + p.h;           player.velY = 0; }
             } else {
-                if (player.velY <= 0) {
-                    player.y = p.y + p.h;
-                    player.velY = 0;
-                    player.onSurface = true;
-                } else {
-                    player.y = p.y - player.height;
-                    player.velY = 0;
-                }
+                if (player.velY <= 0) { player.y = p.y + p.h;           player.velY = 0; player.onSurface = true; }
+                else                  { player.y = p.y - player.height; player.velY = 0; }
             }
         }
     });
@@ -488,36 +437,26 @@ function update() {
     updatePlayerAnimation();
 
     for (const h of hazards) {
-        const hx = h.x + HBOX_MX;
-        const hw = h.w - 2 * HBOX_MX;
-        const hy = h.y + HBOX_MY;
-        const hh = h.h - HBOX_MY;
-        const px = player.x + 8;
-        const pw = player.width - 16;
-        const py = player.y + 8;
-        const ph = player.height - 16;
-
+        const hx = h.x + HBOX_MX,  hw = h.w - 2 * HBOX_MX;
+        const hy = h.y + HBOX_MY,  hh = h.h - HBOX_MY;
+        const px = player.x + 8,   pw = player.width  - 16;
+        const py = player.y + 8,   ph = player.height - 16;
         if (px < hx + hw && px + pw > hx && py < hy + hh && py + ph > hy) {
             resetGame("Le Néant vous a rattrapé...");
-            draw();
-            requestAnimationFrame(update);
-            return;
+            draw(); requestAnimationFrame(update); return;
         }
     }
 
     if (player.y < -200 || player.y > canvas.height + 200) {
         resetGame("Perdu dans l'éther...");
-        draw();
-        requestAnimationFrame(update);
-        return;
+        draw(); requestAnimationFrame(update); return;
     }
 
     if (player.x < goal.x + goal.w && player.x + player.width > goal.x &&
         player.y < goal.y + goal.h && player.y + player.height > goal.y) {
         if (currentLevel === DEV_TEST_SLOT) {
-            // En mode test, victoire = retour au menu sans passer au niveau suivant
             showMenu();
-        } else if (currentLevel < getTotalLevelCount()) {
+        } else if (currentLevel < TOTAL_LEVELS) {
             loadLevel(currentLevel + 1);
         } else {
             showMenu();
@@ -528,12 +467,15 @@ function update() {
     requestAnimationFrame(update);
 }
 
+// ─── DESSIN ───────────────────────────────────────────────────────────────────
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const bgImg = getCurrentBackgroundImage();
-    const curPlatImg = getCurrentPlatformImage();
-    const curFloorImg = getCurrentFloorImage();
+    const theme      = getTheme();
+    const bgImg      = theme.background;
+    const platImg    = theme.platform;
+    const picsImg    = theme.pics;
+    const flagImg    = theme.flag;
 
     if (bgImg.complete) {
         ctx.save();
@@ -548,11 +490,11 @@ function draw() {
 
     if (gameState === 'MENU') return;
 
-    drawStaticFloor(curFloorImg.complete && curFloorImg.naturalWidth ? curFloorImg : curPlatImg);
+    drawStaticFloor();
 
     platforms.forEach(p => {
         if (p.isFloor) return;
-        if (curPlatImg.complete) ctx.drawImage(curPlatImg, p.x, p.y, p.w, p.h);
+        if (platImg.complete) ctx.drawImage(platImg, p.x, p.y, p.w, p.h);
     });
 
     hazards.forEach(h => {
@@ -584,26 +526,24 @@ function draw() {
     }
 }
 
+// ─── CLAVIER ──────────────────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
 
     if (e.code === 'Space' && player.onSurface && gameState === 'PLAYING') {
         gravityDirection *= -1;
-        player.onSurface = false;
-        player.velX *= 0.6;
-        player.velY = gravityDirection * GRAVITY;
-        player.y += gravityDirection * FLIP_OFFSET;
+        player.onSurface  = false;
+        player.velX      *= 0.6;
+        player.velY       = gravityDirection * GRAVITY;
+        player.y         += gravityDirection * FLIP_OFFSET;
     }
 
-    if (e.code === 'Escape' && gameState === 'PLAYING') showMenu();
+    if (e.code === 'Escape' && gameState === 'PLAYING')  showMenu();
     if (gameState === 'GAME_OVER' && (e.code === 'Enter' || e.code === 'KeyR')) retryLevel();
     if (gameState === 'GAME_OVER' && e.code === 'Escape') showMenu();
 });
 
-window.addEventListener('keyup', e => {
-    keys[e.code] = false;
-});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-loadCustomLevels();
 showMenu();
 update();
