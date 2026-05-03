@@ -75,12 +75,12 @@ const FLOOR_H     = 65;
 const HBOX_MX     = 20;
 const HBOX_MY     = 18;
 
-const GRAVITY     = 0.82;  // était 0.9
-const MAX_VY      = 13;    // était 14
-const MAX_VX      = 9.5;   // était 10
-const ACCEL       = 1.35;  // était 1.45
+const GRAVITY     = 0.8;   // valeur d'origine
+const MAX_VY      = 12;    // était 13
+const MAX_VX      = 8.5;   // était 9.5
+const ACCEL       = 1.2;   // était 1.35
 const FRIC        = 0.78;
-const FLIP_OFFSET = 12;
+const FLIP_OFFSET = 8;     // était 12 — transition de gravité plus douce
 
 const TOTAL_LEVELS = 5;
 
@@ -212,7 +212,6 @@ function buildLevel4(W, H, floorY, CEIL_Y) {
 
 function buildLevel5(W, H, floorY, CEIL_Y) {
     const PW = 200;
-
     const c1x = W * 0.06 | 0;
     const m1x = W * 0.24 | 0;
     const m1y = H * 0.44 | 0;
@@ -222,7 +221,6 @@ function buildLevel5(W, H, floorY, CEIL_Y) {
     const c3x = W * 0.70 | 0;
     const m3x = W * 0.84 | 0;
     const m3y = H * 0.50 | 0;
-
     platforms = [
         makeFloor(W, floorY),
         makePlatform(c1x, CEIL_Y,  PW, PLAT_H),
@@ -232,7 +230,6 @@ function buildLevel5(W, H, floorY, CEIL_Y) {
         makePlatform(c3x, CEIL_Y,  PW, PLAT_H),
         makePlatform(m3x, m3y,     PW, PLAT_H)
     ];
-
     hazards = [
         { x: c1x + 60,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: m1x + 50,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
@@ -240,14 +237,13 @@ function buildLevel5(W, H, floorY, CEIL_Y) {
         { x: m2x + 50,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: c3x + 60,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: m3x + 50,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c1x + 30,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-        { x: c2x + 30,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-        { x: c3x + 40,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-        { x: m1x + 40,  y: m1y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' },
-        { x: m2x + 40,  y: m2y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' },
-        { x: m3x + 30,  y: m3y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' }
+        { x: c1x + 30,  y: CEIL_Y + PLAT_H,    w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top'    },
+        { x: c2x + 30,  y: CEIL_Y + PLAT_H,    w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top'    },
+        { x: c3x + 40,  y: CEIL_Y + PLAT_H,    w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top'    },
+        { x: m1x + 40,  y: m1y + PLAT_H,       w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top'    },
+        { x: m2x + 40,  y: m2y + PLAT_H,       w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top'    },
+        { x: m3x + 30,  y: m3y + PLAT_H,       w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top'    }
     ];
-
     goal.x = Math.min(m3x + PW + 60, W - goal.w - 50);
     goal.y = floorY - 110;
 }
