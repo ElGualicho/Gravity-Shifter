@@ -75,10 +75,10 @@ const FLOOR_H     = 65;
 const HBOX_MX     = 20;
 const HBOX_MY     = 18;
 
-const GRAVITY     = 0.9;   // était 1.0
-const MAX_VY      = 14;    // était 15
-const MAX_VX      = 10;    // était 11
-const ACCEL       = 1.45;  // était 1.6
+const GRAVITY     = 0.82;  // était 0.9
+const MAX_VY      = 13;    // était 14
+const MAX_VX      = 9.5;   // était 10
+const ACCEL       = 1.35;  // était 1.45
 const FRIC        = 0.78;
 const FLIP_OFFSET = 12;
 
@@ -211,9 +211,7 @@ function buildLevel4(W, H, floorY, CEIL_Y) {
 }
 
 function buildLevel5(W, H, floorY, CEIL_Y) {
-    // Steel avancé — plateformes plus étroites, piques denses sol + plafond,
-    // deux îlots intermédiaires à traverser dans les deux sens de gravité.
-    const PW = 200; // plateformes plus courtes que PLAT_W
+    const PW = 200;
 
     const c1x = W * 0.06 | 0;
     const m1x = W * 0.24 | 0;
@@ -236,18 +234,15 @@ function buildLevel5(W, H, floorY, CEIL_Y) {
     ];
 
     hazards = [
-        // Piques au sol
         { x: c1x + 60,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: m1x + 50,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: c2x + 60,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: m2x + 50,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: c3x + 60,  y: floorY - CRYSTAL_H, w: 3 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
         { x: m3x + 50,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        // Piques au plafond (sous les plateformes plafond)
         { x: c1x + 30,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
         { x: c2x + 30,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
         { x: c3x + 40,  y: CEIL_Y + PLAT_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'top' },
-        // Piques suspendus sous les îlots intermédiaires
         { x: m1x + 40,  y: m1y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' },
         { x: m2x + 40,  y: m2y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' },
         { x: m3x + 30,  y: m3y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top' }
