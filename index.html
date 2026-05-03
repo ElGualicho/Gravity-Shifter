@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Gravity Wizard</title>
-    <link rel="stylesheet" href="style.css?v=20260502-2">
+    <link rel="stylesheet" href="style.css?v=20260503-1">
 </head>
 <body>
     <div id="game-container">
@@ -34,13 +34,10 @@
                 <div id="levelSelector" class="level-selector hidden">
                     <h3>Chapitres disponibles</h3>
                     <div class="level-scroll">
-                        <button onclick="startGame(1); toggleLevelSelector()">✨ Chapitre 1 — Nature</button>
-                        <button onclick="startGame(2); toggleLevelSelector()">⚡ Chapitre 2 — Été</button>
-                        <button onclick="startGame(3); toggleLevelSelector()">🌀 Chapitre 3 — Pierre</button>
-                        <button onclick="startGame(4); toggleLevelSelector()">❄️ Chapitre 4 — Hiver</button>
-                        <button onclick="startGame(5); toggleLevelSelector()">⚙️ Chapitre 5 — Métal</button>
-                        <button onclick="startGame(6); toggleLevelSelector()">☀️ Chapitre 6 — Été Difficile</button>
-                        <div id="customLevelButtons"></div>
+                        <button onclick="startGame(1); toggleLevelSelector()">🌿 Chapitre 1 — Nature</button>
+                        <button onclick="startGame(2); toggleLevelSelector()">❄️ Chapitre 2 — Ice</button>
+                        <button onclick="startGame(3); toggleLevelSelector()">🪨 Chapitre 3 — Clay</button>
+                        <button onclick="startGame(4); toggleLevelSelector()">⚙️ Chapitre 4 — Steel</button>
                     </div>
                 </div>
             </div>
@@ -63,22 +60,18 @@
         </section>
 
         <aside id="devPanel" class="dev-panel" aria-label="Mode développeur">
-            <!-- Header fixe, draggable -->
             <div class="dev-panel-header draggable-handle">
                 <strong>Mode développeur</strong>
                 <button onclick="closeDevEditor()">Quitter</button>
             </div>
-
-            <!-- Corps scrollable : tous les contrôles sont ici -->
             <div class="dev-panel-body">
                 <label>
                     Thème
                     <select id="devThemeSelect" class="dev-theme-select">
-                        <option value="grass">Nature / herbe</option>
-                        <option value="clay">Été / argile</option>
-                        <option value="stone">Pierre</option>
-                        <option value="winter">Hiver</option>
-                        <option value="steel">Métal</option>
+                        <option value="nature">Nature</option>
+                        <option value="ice">Ice</option>
+                        <option value="clay">Clay</option>
+                        <option value="steel">Steel</option>
                     </select>
                 </label>
 
@@ -91,7 +84,6 @@
 
                 <div class="dev-tools">
                     <button onclick="testDevLevel()">Tester</button>
-                    <button onclick="saveDevLevel()">Enregistrer</button>
                     <button onclick="exportDevLevel()">Exporter JSON</button>
                     <button onclick="clearDevLevel()">Vider</button>
                 </div>
@@ -102,9 +94,9 @@
         </aside>
     </div>
 
-    <script src="game.js?v=20260502-2"></script>
-    <script src="visual-adjustments.js?v=20260502-2"></script>
-    <script src="dev-editor.js?v=20260502-2"></script>
-    <script src="ui-helpers.js?v=20260502-2"></script>
+    <script src="game.js?v=20260503-1"></script>
+    <script src="visual-adjustments.js?v=20260503-1"></script>
+    <script src="dev-editor.js?v=20260503-1"></script>
+    <script src="ui-helpers.js?v=20260503-1"></script>
 </body>
 </html>

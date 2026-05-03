@@ -20,7 +20,7 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', () => {
     resizeCanvas();
-    loadLevel(currentLevel);
+    if (gameState === 'PLAYING') loadLevel(currentLevel);
 });
 resizeCanvas();
 
@@ -34,69 +34,63 @@ function loadImage(src) {
     return img;
 }
 
-const backgroundImg    = loadImage('assets/background.png');
-const bgNatureImg      = loadImage('assets/background_nature.png');
-const bgIceImg         = loadImage('assets/background_ice.png');
-const bgClayImg        = loadImage('assets/background_clay.png');
-const bgSteelImg       = loadImage('assets/background_steel.png');
+const bgNatureImg    = loadImage('assets/background_nature.png');
+const bgIceImg       = loadImage('assets/background_ice.png');
+const bgClayImg      = loadImage('assets/background_clay.png');
+const bgSteelImg     = loadImage('assets/background_steel.png');
 
-const floorNatureImg   = loadImage('assets/floor_nature.png');
-const floorIceImg      = loadImage('assets/floor_ice.png');
-const floorClayImg     = loadImage('assets/floor_clay.png');
-const floorSteelImg    = loadImage('assets/floor_steel.png');
+const floorNatureImg = loadImage('assets/floor_nature.png');
+const floorIceImg    = loadImage('assets/floor_ice.png');
+const floorClayImg   = loadImage('assets/floor_clay.png');
+const floorSteelImg  = loadImage('assets/floor_steel.png');
 
-const platNatureImg    = loadImage('assets/platform_nature.png');
-const platIceImg       = loadImage('assets/platform_ice.png');
-const platClayImg      = loadImage('assets/platform_clay.png');
-const platSteelImg     = loadImage('assets/platform_steel.png');
+const platNatureImg  = loadImage('assets/platform_nature.png');
+const platIceImg     = loadImage('assets/platform_ice.png');
+const platClayImg    = loadImage('assets/platform_clay.png');
+const platSteelImg   = loadImage('assets/platform_steel.png');
 
-const flagNatureImg    = loadImage('assets/flag_nature.png');
-const flagIceImg       = loadImage('assets/flag_ice.png');
-const flagClayImg      = loadImage('assets/flag_clay.png');
-const flagSteelImg     = loadImage('assets/flag_steel.png');
+const flagNatureImg  = loadImage('assets/flag_nature.png');
+const flagIceImg     = loadImage('assets/flag_ice.png');
+const flagClayImg    = loadImage('assets/flag_clay.png');
+const flagSteelImg   = loadImage('assets/flag_steel.png');
 
-const picsNatureImg    = loadImage('assets/pics_nature.png');
-const picsIceImg       = loadImage('assets/pics_ice.png');
-const picsClayImg      = loadImage('assets/pics_clay.png');
-const picsSteelImg     = loadImage('assets/pics_steel.png');
+const picsNatureImg  = loadImage('assets/pics_nature.png');
+const picsIceImg     = loadImage('assets/pics_ice.png');
+const picsClayImg    = loadImage('assets/pics_clay.png');
+const picsSteelImg   = loadImage('assets/pics_steel.png');
 
 const walkFrames = [];
-['walk1.png', 'walk2.png', 'walk3.png'].forEach((name, index) => {
-    walkFrames[index] = loadImage(`assets/${name}`);
+['walk1.png', 'walk2.png', 'walk3.png'].forEach((name, i) => {
+    walkFrames[i] = loadImage(`assets/${name}`);
 });
 
 // ─── CONSTANTES PHYSIQUE ──────────────────────────────────────────────────────
-const PLAYER_W   = 75;
-const PLAYER_H   = 95;
-const CRYSTAL_W  = 65;
-const CRYSTAL_H  = 70;
-const PLAT_W     = 320;
-const PLAT_H     = 60;
-const FLOOR_H    = 65;
-const HBOX_MX    = 20;
-const HBOX_MY    = 18;
+const PLAYER_W    = 75;
+const PLAYER_H    = 95;
+const CRYSTAL_W   = 65;
+const CRYSTAL_H   = 70;
+const PLAT_W      = 320;
+const PLAT_H      = 60;
+const FLOOR_H     = 65;
+const HBOX_MX     = 20;
+const HBOX_MY     = 18;
 
-const GRAVITY    = 0.8;
-const MAX_VY     = 13;
-const MAX_VX     = 9;
-const ACCEL      = 1.3;
-const FRIC       = 0.78;
+const GRAVITY     = 0.8;
+const MAX_VY      = 13;
+const MAX_VX      = 9;
+const ACCEL       = 1.3;
+const FRIC        = 0.78;
 const FLIP_OFFSET = 12;
 
 const TOTAL_LEVELS = 4;
 
 const player = {
-    x: 100,
-    y: 300,
-    width: PLAYER_W,
-    height: PLAYER_H,
-    velX: 0,
-    velY: 0,
+    x: 100, y: 300,
+    width: PLAYER_W, height: PLAYER_H,
+    velX: 0, velY: 0,
     onSurface: false,
-    currentFrame: 0,
-    animationSpeed: 0.2,
-    isMoving: false,
-    facingRight: true
+    currentFrame: 0, animationSpeed: 0.2,
+    isMoving: false, facingRight: true
 };
 
 let platforms = [];
@@ -105,66 +99,32 @@ let goal      = { x: 0, y: 0, w: 100, h: 110 };
 
 // ─── THÈMES ───────────────────────────────────────────────────────────────────
 const themePresets = {
-    nature: {
-        background: bgNatureImg,
-        floor:      floorNatureImg,
-        platform:   platNatureImg,
-        flag:       flagNatureImg,
-        pics:       picsNatureImg,
-        floorHeight: FLOOR_H
-    },
-    ice: {
-        background: bgIceImg,
-        floor:      floorIceImg,
-        platform:   platIceImg,
-        flag:       flagIceImg,
-        pics:       picsIceImg,
-        floorHeight: FLOOR_H
-    },
-    clay: {
-        background: bgClayImg,
-        floor:      floorClayImg,
-        platform:   platClayImg,
-        flag:       flagClayImg,
-        pics:       picsClayImg,
-        floorHeight: FLOOR_H
-    },
-    steel: {
-        background: bgSteelImg,
-        floor:      floorSteelImg,
-        platform:   platSteelImg,
-        flag:       flagSteelImg,
-        pics:       picsSteelImg,
-        floorHeight: FLOOR_H
-    }
+    nature: { background: bgNatureImg,  floor: floorNatureImg, platform: platNatureImg, flag: flagNatureImg, pics: picsNatureImg, floorHeight: FLOOR_H },
+    ice:    { background: bgIceImg,     floor: floorIceImg,    platform: platIceImg,    flag: flagIceImg,    pics: picsIceImg,    floorHeight: FLOOR_H },
+    clay:   { background: bgClayImg,    floor: floorClayImg,   platform: platClayImg,   flag: flagClayImg,   pics: picsClayImg,   floorHeight: FLOOR_H },
+    steel:  { background: bgSteelImg,   floor: floorSteelImg,  platform: platSteelImg,  flag: flagSteelImg,  pics: picsSteelImg,  floorHeight: FLOOR_H }
 };
 
-const levelThemes = {
-    1: 'nature',
-    2: 'ice',
-    3: 'clay',
-    4: 'steel'
-};
+const levelThemes = { 1: 'nature', 2: 'ice', 3: 'clay', 4: 'steel' };
 
-function getTheme(level = currentLevel) {
-    if (level === DEV_TEST_SLOT && devTestLevel) {
+function getTheme(level) {
+    const lv = level !== undefined ? level : currentLevel;
+    if (lv === DEV_TEST_SLOT && devTestLevel) {
         return themePresets[devTestLevel.theme] || themePresets.nature;
     }
-    return themePresets[levelThemes[level]] || themePresets.nature;
+    return themePresets[levelThemes[lv]] || themePresets.nature;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function makeFloor(W, floorY) {
     return { x: 0, y: floorY, w: W * 2, h: 120, isFloor: true };
 }
-
-function makePlatform(x, y, w = PLAT_W, h = PLAT_H) {
-    return { x, y, w, h };
+function makePlatform(x, y, w, h) {
+    return { x, y, w: w || PLAT_W, h: h || PLAT_H };
 }
 
-// ─── CONSTRUCTION DES NIVEAUX ─────────────────────────────────────────────────
+// ─── NIVEAUX ──────────────────────────────────────────────────────────────────
 function buildLevel1(W, H, floorY, CEIL_Y) {
-    // Nature — introduction, 2 plateformes plafond
     const c1x = W * 0.08 | 0;
     const c2x = W * 0.48 | 0;
     platforms = [
@@ -181,7 +141,6 @@ function buildLevel1(W, H, floorY, CEIL_Y) {
 }
 
 function buildLevel2(W, H, floorY, CEIL_Y) {
-    // Ice — plateforme intermédiaire introduite
     const c1x = W * 0.07 | 0;
     const m1x = W * 0.28 | 0;
     const m1y = H * 0.40 | 0;
@@ -193,17 +152,16 @@ function buildLevel2(W, H, floorY, CEIL_Y) {
         makePlatform(c2x, CEIL_Y)
     ];
     hazards = [
-        { x: c1x + 80,  y: floorY - CRYSTAL_H,  w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: m1x + 40,  y: floorY - CRYSTAL_H,  w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c2x + 60,  y: floorY - CRYSTAL_H,  w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
-        { x: c2x + 250, y: CEIL_Y + PLAT_H,     w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top'    }
+        { x: c1x + 80,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: m1x + 40,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 60,  y: floorY - CRYSTAL_H, w: 2 * CRYSTAL_W, h: CRYSTAL_H, side: 'bottom' },
+        { x: c2x + 250, y: CEIL_Y + PLAT_H,    w: CRYSTAL_W,     h: CRYSTAL_H, side: 'top'    }
     ];
     goal.x = c2x + PLAT_W + 150;
     goal.y = floorY - 110;
 }
 
 function buildLevel3(W, H, floorY, CEIL_Y) {
-    // Clay — parcours avec 2 plateformes intermédiaires
     const c1x = W * 0.07 | 0;
     const m1x = W * 0.27 | 0;
     const m1y = H * 0.40 | 0;
@@ -228,7 +186,6 @@ function buildLevel3(W, H, floorY, CEIL_Y) {
 }
 
 function buildLevel4(W, H, floorY, CEIL_Y) {
-    // Steel — niveau avancé, piques au plafond aussi
     const c1x = W * 0.09 | 0;
     const c2x = W * 0.34 | 0;
     const m1x = W * 0.49 | 0;
@@ -273,9 +230,9 @@ function buildDevLevel(levelData, W, H, floorY) {
         const r = denormalizeRect(h, W, H);
         return { x: r.x, y: r.y, w: r.w, h: r.h, side: h.side || 'bottom' };
     });
-    const savedGoal = levelData.goal || { xRatio: 0.82, yRatio: 0.78, w: 100, h: 110 };
-    const g = denormalizeRect(savedGoal, W, H);
-    goal = { x: g.x, y: g.y, w: savedGoal.w || 100, h: savedGoal.h || 110 };
+    const sg = levelData.goal || { xRatio: 0.82, yRatio: 0.78, w: 100, h: 110 };
+    const g = denormalizeRect(sg, W, H);
+    goal = { x: g.x, y: g.y, w: sg.w || 100, h: sg.h || 110 };
 }
 
 function loadLevel(lv) {
@@ -307,7 +264,7 @@ function loadLevel(lv) {
     else if (lv === 4) buildLevel4(W, H, floorY, CEIL_Y);
 }
 
-// ─── MODE DÉVELOPPEUR ─────────────────────────────────────────────────────────
+// ─── MODE DÉVELOPPEUR ────────────────────────────────────────────────────────
 function startDevTest(levelData) {
     devTestLevel = levelData;
     setOverlayVisibility(false, false);
@@ -315,12 +272,12 @@ function startDevTest(levelData) {
     loadLevel(DEV_TEST_SLOT);
 }
 
-// ─── RENDU SOL ────────────────────────────────────────────────────────────────
+// ─── SOL ──────────────────────────────────────────────────────────────────────
 function drawStaticFloor() {
     const theme  = getTheme();
     const img    = theme.floor;
     const floorH = theme.floorHeight;
-    if (!img.complete || !img.naturalWidth) return;
+    if (!img || !img.complete || !img.naturalWidth) return;
     const yPos = canvas.height - floorH;
     for (let x = 0; x < canvas.width; x += img.naturalWidth) {
         ctx.drawImage(img, x, yPos, img.naturalWidth, floorH);
@@ -329,18 +286,15 @@ function drawStaticFloor() {
 
 // ─── ANIMATION ────────────────────────────────────────────────────────────────
 function updatePlayerAnimation() {
-    const movingOnSurface = player.onSurface && Math.abs(player.velX) > 0.4;
-    player.isMoving = movingOnSurface;
-    if (movingOnSurface) {
-        player.currentFrame = (player.currentFrame + player.animationSpeed) % walkFrames.length;
-    } else {
-        player.currentFrame = 0;
-    }
+    const moving = player.onSurface && Math.abs(player.velX) > 0.4;
+    player.isMoving = moving;
+    if (moving) player.currentFrame = (player.currentFrame + player.animationSpeed) % walkFrames.length;
+    else        player.currentFrame = 0;
 }
 
 function getCurrentWalkFrame() {
-    const frameIndex = Math.floor(player.currentFrame) % walkFrames.length;
-    const frame = walkFrames[frameIndex];
+    const idx   = Math.floor(player.currentFrame) % walkFrames.length;
+    const frame = walkFrames[idx];
     return frame?.complete && frame.naturalWidth ? frame : walkFrames[0];
 }
 
@@ -379,11 +333,9 @@ function retryLevel() {
     loadLevel(currentLevel);
 }
 
-function resetGame(msg) {
-    showGameOver(msg);
-}
+function resetGame(msg) { showGameOver(msg); }
 
-// ─── BOUCLE PRINCIPALE ───────────────────────────────────────────────────────
+// ─── BOUCLE PRINCIPALE ────────────────────────────────────────────────────────
 function update() {
     if (gameState !== 'PLAYING') {
         draw();
@@ -406,9 +358,7 @@ function update() {
     let canMoveX = true;
     platforms.forEach(p => {
         if (nextX < p.x + p.w && nextX + player.width > p.x &&
-            player.y < p.y + p.h && player.y + player.height > p.y) {
-            canMoveX = false;
-        }
+            player.y < p.y + p.h && player.y + player.height > p.y) canMoveX = false;
     });
     if (canMoveX) player.x = nextX;
     else player.velX = 0;
@@ -437,10 +387,10 @@ function update() {
     updatePlayerAnimation();
 
     for (const h of hazards) {
-        const hx = h.x + HBOX_MX,  hw = h.w - 2 * HBOX_MX;
-        const hy = h.y + HBOX_MY,  hh = h.h - HBOX_MY;
-        const px = player.x + 8,   pw = player.width  - 16;
-        const py = player.y + 8,   ph = player.height - 16;
+        const hx = h.x + HBOX_MX, hw = h.w - 2 * HBOX_MX;
+        const hy = h.y + HBOX_MY, hh = h.h - HBOX_MY;
+        const px = player.x + 8,  pw = player.width  - 16;
+        const py = player.y + 8,  ph = player.height - 16;
         if (px < hx + hw && px + pw > hx && py < hy + hh && py + ph > hy) {
             resetGame("Le Néant vous a rattrapé...");
             draw(); requestAnimationFrame(update); return;
@@ -471,19 +421,19 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const theme      = getTheme();
-    const bgImg      = theme.background;
-    const platImg    = theme.platform;
-    const picsImg    = theme.pics;
-    const flagImg    = theme.flag;
+    const theme   = getTheme();
+    const bgImg   = theme.background;
+    const platImg = theme.platform;
+    const picsImg = theme.pics;
+    const flagImg = theme.flag;
 
-    if (bgImg.complete) {
+    if (bgImg && bgImg.complete) {
         ctx.save();
         ctx.filter = gameState === 'MENU'
-            ? "blur(10px) brightness(0.38)"
+            ? 'blur(10px) brightness(0.38)'
             : gameState === 'GAME_OVER'
-                ? "blur(5px) brightness(0.45)"
-                : "blur(4px) brightness(0.65)";
+                ? 'blur(5px) brightness(0.45)'
+                : 'blur(4px) brightness(0.65)';
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
         ctx.restore();
     }
@@ -494,11 +444,11 @@ function draw() {
 
     platforms.forEach(p => {
         if (p.isFloor) return;
-        if (platImg.complete) ctx.drawImage(platImg, p.x, p.y, p.w, p.h);
+        if (platImg && platImg.complete) ctx.drawImage(platImg, p.x, p.y, p.w, p.h);
     });
 
     hazards.forEach(h => {
-        if (!picsImg.complete) return;
+        if (!picsImg || !picsImg.complete) return;
         const count = Math.ceil(h.w / CRYSTAL_W);
         for (let i = 0; i < count; i++) {
             const dx = h.x + i * CRYSTAL_W;
@@ -514,14 +464,14 @@ function draw() {
         }
     });
 
-    if (flagImg.complete) ctx.drawImage(flagImg, goal.x, goal.y, goal.w, goal.h);
+    if (flagImg && flagImg.complete) ctx.drawImage(flagImg, goal.x, goal.y, goal.w, goal.h);
 
-    const playerFrame = getCurrentWalkFrame();
-    if (playerFrame?.complete) {
+    const frame = getCurrentWalkFrame();
+    if (frame?.complete) {
         ctx.save();
         ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
         ctx.scale(player.facingRight ? 1 : -1, gravityDirection === -1 ? -1 : 1);
-        ctx.drawImage(playerFrame, -player.width / 2, -player.height / 2, player.width, player.height);
+        ctx.drawImage(frame, -player.width / 2, -player.height / 2, player.width, player.height);
         ctx.restore();
     }
 }
@@ -529,7 +479,6 @@ function draw() {
 // ─── CLAVIER ──────────────────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
-
     if (e.code === 'Space' && player.onSurface && gameState === 'PLAYING') {
         gravityDirection *= -1;
         player.onSurface  = false;
@@ -537,12 +486,10 @@ window.addEventListener('keydown', e => {
         player.velY       = gravityDirection * GRAVITY;
         player.y         += gravityDirection * FLIP_OFFSET;
     }
-
-    if (e.code === 'Escape' && gameState === 'PLAYING')  showMenu();
+    if (e.code === 'Escape' && gameState === 'PLAYING') showMenu();
     if (gameState === 'GAME_OVER' && (e.code === 'Enter' || e.code === 'KeyR')) retryLevel();
     if (gameState === 'GAME_OVER' && e.code === 'Escape') showMenu();
 });
-
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
 showMenu();
